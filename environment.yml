@@ -1,0 +1,9 @@
+name: zhixian
+channels:
+  - defaults
+dependencies:
+  - python=3.13
+  - pip
+  - pip:
+      - -r apps/api/requirements.txt
+
