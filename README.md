@@ -86,7 +86,7 @@ cd apps/web && npm run lint && npm run build
 docker compose config
 ```
 
-完整说明见 [开发计划](docs/DEVELOPMENT_PLAN.md)、[架构设计](docs/ARCHITECTURE.md)、[服务器部署](docs/DEPLOYMENT.md) 和 [API 说明](docs/API.md)。
+完整说明见 [跨电脑开发规范](docs/development/README.md)、[开发计划](docs/DEVELOPMENT_PLAN.md)、[架构设计](docs/ARCHITECTURE.md)、[服务器部署](docs/DEPLOYMENT.md) 和 [API 说明](docs/API.md)。
 
 ## 安全提醒
 
