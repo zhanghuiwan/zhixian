@@ -1,8 +1,10 @@
 import os
+from base64 import urlsafe_b64encode
 
 os.environ["ENVIRONMENT"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///./test_zhixian.db"
 os.environ["SECRET_KEY"] = "test-secret"
+os.environ["AI_CREDENTIAL_ENCRYPTION_KEY"] = urlsafe_b64encode(b"0" * 32).decode("ascii")
 
 import pytest
 from fastapi.testclient import TestClient
@@ -51,4 +53,3 @@ def auth_headers(client):
     response = client.post("/api/v1/auth/register", json={"email": "learner@example.com", "password": "Strong123!", "nickname": "Learner"})
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
-

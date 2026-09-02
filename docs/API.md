@@ -17,6 +17,16 @@ Authorization: Bearer <access_token>
 
 - `GET /dashboard` 今日数据、总进度和最近活动
 
+## AI 模型设置
+
+- `GET /ai/providers/catalog` 支持的厂商、官方地址和推荐模型
+- `GET /ai/providers` 当前用户已保存的厂商配置（只返回 Key 掩码）
+- `PUT /ai/providers/{provider}` 新增或更新 DeepSeek、MiniMax 配置
+- `POST /ai/providers/{provider}/test` 使用已保存的 Key 执行最小连接测试
+- `DELETE /ai/providers/{provider}` 删除配置
+
+保存 API Key 前，服务器必须配置 `AI_CREDENTIAL_ENCRYPTION_KEY`。完整 Key 不会通过读取接口返回。
+
 ## 词书与学习
 
 - `GET /wordbooks` 词书列表和用户进度
@@ -42,4 +52,3 @@ Authorization: Bearer <access_token>
 - `GET /articles/bookmarks` 收藏句子列表
 
 启动后访问 `/docs` 查看由 OpenAPI 自动生成的完整交互文档。
-

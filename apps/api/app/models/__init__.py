@@ -1,4 +1,5 @@
 from app.models.entities import (
+    AIProviderConfig,
     Article,
     ArticleSentence,
     SentenceBookmark,
@@ -12,6 +13,7 @@ from app.models.entities import (
 )
 
 __all__ = [
+    "AIProviderConfig",
     "Article",
     "ArticleSentence",
     "SentenceBookmark",
@@ -23,4 +25,3 @@ __all__ = [
     "Wordbook",
     "WordbookWord",
 ]
-

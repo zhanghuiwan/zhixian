@@ -65,11 +65,20 @@ Copy-Item apps/web/.env.example apps/web/.env.local
 Copy-Item .env.example .env
 ```
 
+首次启用 AI 模型设置时，为本地 `apps/api/.env` 和 Docker 根目录 `.env` 分别生成开发密钥：
+
+```powershell
+python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"
+```
+
+把输出填写到 `AI_CREDENTIAL_ENCRYPTION_KEY`。不同电脑可以使用不同的开发密钥，但由一台服务器恢复数据库备份时必须使用该服务器原来的密钥，否则已保存的厂商 API Key 无法解密。
+
 注意：
 
 - `.env.example` 只能包含占位值，禁止临时保存真实 Token。
 - `NEXT_PUBLIC_*` 会进入浏览器产物，必须视为公开信息。
 - AI Key、`SECRET_KEY` 和数据库密码只能放后端或服务器环境变量。
+- `AI_CREDENTIAL_ENCRYPTION_KEY` 只用于加密 AI Key，需要和数据库分开备份。
 - 不在日志、截图、报错或聊天记录中输出完整 Token。
 - 每台电脑使用自己的环境文件，不通过 GitHub 同步。
 

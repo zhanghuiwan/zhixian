@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24 * 7
     cors_origins: list[str] | str = ["http://localhost:3000"]
     create_demo_user: bool = False
+    ai_credential_encryption_key: str | None = None
+    ai_provider_timeout_seconds: float = 20.0
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

@@ -39,6 +39,29 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class AIProviderConfig(Base):
+    __tablename__ = "ai_provider_configs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "provider", name="uq_ai_provider_user_provider"),
+        Index("ix_ai_provider_user", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    provider: Mapped[str] = mapped_column(String(40))
+    display_name: Mapped[str] = mapped_column(String(80))
+    api_key_ciphertext: Mapped[str] = mapped_column(Text)
+    api_key_last_four: Mapped[str] = mapped_column(String(8))
+    base_url: Mapped[str] = mapped_column(String(500))
+    model: Mapped[str] = mapped_column(String(120))
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class Word(Base):
     __tablename__ = "words"
 

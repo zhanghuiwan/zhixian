@@ -13,9 +13,18 @@ git clone https://github.com/<your-account>/zhixian.git /opt/zhixian
 cd /opt/zhixian
 cp .env.example .env
 openssl rand -hex 32
+python3 -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"
 ```
 
-编辑 `.env`，为 `POSTGRES_PASSWORD` 和 `SECRET_KEY` 填入独立的强随机值，然后运行：
+编辑 `.env`：
+
+- 为 `POSTGRES_PASSWORD` 设置独立强密码；
+- 把 `openssl` 输出写入 `SECRET_KEY`；
+- 把 Python 命令输出写入 `AI_CREDENTIAL_ENCRYPTION_KEY`。
+
+`AI_CREDENTIAL_ENCRYPTION_KEY` 用来加密用户配置的 DeepSeek、MiniMax 等 API Key。丢失后数据库内的厂商 Key 无法解密，必须在安全的离线位置单独备份，且不能提交 GitHub。
+
+然后运行：
 
 ```bash
 docker compose up -d --build
@@ -53,7 +62,7 @@ bash scripts/backup.sh
 20 3 * * * cd /opt/zhixian && /usr/bin/bash scripts/backup.sh >> /var/log/zhixian-backup.log 2>&1
 ```
 
-备份保存在 `/data/zhixian/backups`，默认保留 14 天。还应每周下载一份到本地；单服务器上的备份无法防止整块云盘故障。
+备份保存在 `/data/zhixian/backups`，默认保留 14 天。还应每周下载一份到本地；单服务器上的备份无法防止整块云盘故障。数据库备份不包含 `.env`，因此必须另外安全备份 `AI_CREDENTIAL_ENCRYPTION_KEY`，不要把完整 `.env` 放进公开网盘或 Git 仓库。
 
 ## 6. 恢复数据库
 

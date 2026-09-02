@@ -11,9 +11,8 @@
 Nginx :80/:443
   ├── /       → Next.js Web
   └── /api/*  → FastAPI API
-                    │
-                    ▼
-              PostgreSQL
+                    ├── PostgreSQL
+                    └── DeepSeek / MiniMax / 后续模型厂商
 ```
 
 本地开发默认使用 SQLite；生产环境通过 `DATABASE_URL` 使用 PostgreSQL。SQLAlchemy 屏蔽数据库差异，业务层不需要分叉。
@@ -54,9 +53,12 @@ Nginx :80/:443
 
 ## 6. AI 扩展边界
 
-未来新增 `AIProvider` 接口，业务只请求结构化能力，例如文章生成、句子讲解或计划建议。模型响应必须经过 Pydantic 校验后才能进入数据库。模型密钥只通过服务端环境变量配置，不下发浏览器。
+第二阶段通过 Provider 适配层统一 DeepSeek、MiniMax 等厂商。用户 API Key 由服务端使用 `AI_CREDENTIAL_ENCRYPTION_KEY` 加密后按用户保存，读取接口只返回末四位掩码，完整 Key 不下发浏览器。厂商官方地址由服务端白名单控制。
+
+Agent 只调用注册过的领域工具，不提供任意 SQL、任意 HTTP 或文件系统能力。模型产生的工具参数必须经过 Pydantic 校验；学习历史由数据库实时查询，模型不能作为事实来源。高风险写操作需要确认，所有写操作最终通过领域服务和数据库事务执行。
+
+完整设计见 [第二阶段：知闲学习 Agent](phase-2/README.md)。
 
 ## 7. 文件与备份
 
 当前服务器无对象存储，文件挂载到 `/data/zhixian/uploads`，数据库使用 Docker Volume。备份脚本输出到 `/data/zhixian/backups`，再由用户定期下载到本地或配合阿里云磁盘快照。第一阶段尚未开放文件上传，但目录与部署挂载已预留。
-

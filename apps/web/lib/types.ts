@@ -86,3 +86,33 @@ export interface Dashboard {
   }[];
 }
 
+export type AIProviderName = "deepseek" | "minimax";
+
+export interface AIProviderCatalogItem {
+  provider: AIProviderName;
+  display_name: string;
+  base_url: string;
+  default_model: string;
+  models: string[];
+  supports_tools: boolean;
+  supports_streaming: boolean;
+}
+
+export interface AIProviderConfig {
+  provider: AIProviderName;
+  display_name: string;
+  base_url: string;
+  model: string;
+  masked_api_key: string;
+  is_enabled: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIProviderConnection {
+  status: "ok";
+  provider: AIProviderName;
+  model: string;
+  latency_ms: number;
+}
