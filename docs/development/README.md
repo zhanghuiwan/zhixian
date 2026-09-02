@@ -188,6 +188,18 @@ cd ..\..
 docker compose config
 ```
 
+第二阶段还可以在仓库根目录执行不输出凭证内容的真实厂商冒烟测试：
+
+```powershell
+$env:MINIMAX_API_KEY = (Get-Content -LiteralPath 'C:\安全目录\minimax.txt' -Raw).Trim()
+$env:MINIMAX_MODEL = 'MiniMax-M3'
+.\.venv\Scripts\python.exe scripts\verify_minimax.py
+Remove-Item Env:MINIMAX_API_KEY
+Remove-Item Env:MINIMAX_MODEL
+```
+
+该测试只输出连接、流式和 Tool Call 是否成功，不输出模型回答或 Key。真实测试必须使用仓库外文件，不能把 Key 放入测试代码、命令历史中的明文参数或 `.env.example`。
+
 最低完成标准：
 
 - 后端测试通过。

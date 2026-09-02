@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, BookOpenText, CircleUserRound, Home, LibraryBig, LogOut } from "@/components/icons";
+import { BookMarked, BookOpenText, CircleUserRound, LibraryBig, LogOut, Sparkles } from "@/components/icons";
 import { useAuth } from "@/lib/auth-context";
 
 const nav = [
-  { href: "/dashboard", label: "今日", icon: Home },
+  { href: "/dashboard", label: "知闲 AI", icon: Sparkles },
   { href: "/learn", label: "学词", icon: BookOpenText },
   { href: "/articles", label: "阅读", icon: LibraryBig },
   { href: "/vocabulary", label: "生词", icon: BookMarked },
@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
         <nav className="desktop-nav" aria-label="主要导航">
           {nav.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || (href === "/articles" && pathname.startsWith("/articles/"));
+            const active = pathname === href || (href === "/dashboard" && pathname.startsWith("/assistant")) || (href === "/articles" && pathname.startsWith("/articles/"));
             return <Link key={href} href={href} className={active ? "active" : ""}><Icon size={20} strokeWidth={1.8} /><span>{label}</span></Link>;
           })}
         </nav>
@@ -42,11 +42,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="main-content">{children}</main>
       <nav className="mobile-nav" aria-label="移动端主要导航">
         {nav.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href === "/articles" && pathname.startsWith("/articles/"));
+          const active = pathname === href || (href === "/dashboard" && pathname.startsWith("/assistant")) || (href === "/articles" && pathname.startsWith("/articles/"));
           return <Link key={href} href={href} className={active ? "active" : ""}><Icon size={21} strokeWidth={1.8} /><span>{label}</span></Link>;
         })}
       </nav>
     </div>
   );
 }
-

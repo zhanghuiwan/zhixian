@@ -24,7 +24,7 @@ PROVIDER_SPECS: dict[str, ProviderSpec] = {
         key="minimax",
         display_name="MiniMax",
         base_url="https://api.minimaxi.com/v1",
-        default_model="MiniMax-M2.7",
+        default_model="MiniMax-M3",
         models=("MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"),
     ),
 }
@@ -32,4 +32,3 @@ PROVIDER_SPECS: dict[str, ProviderSpec] = {
 
 def get_provider_spec(provider: str) -> ProviderSpec | None:
     return PROVIDER_SPECS.get(provider.lower())
-

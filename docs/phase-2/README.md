@@ -1,5 +1,8 @@
 # 第二阶段：知闲学习 Agent
 
+> 详细的里程碑、数据模型、API、安全规则和验收矩阵见
+> [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)。
+
 ## 1. 阶段目标
 
 第二阶段将知闲从“固定页面驱动的英语学习工具”升级为“可对话、可查询、可执行的英语学习 Agent”。Agent 必须能够：

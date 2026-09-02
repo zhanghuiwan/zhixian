@@ -5,9 +5,68 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models import User, UserWordProgress, VocabularyItem, Word
-from app.schemas import VocabularyCreate, VocabularyRead
+from app.schemas import (
+    VocabularyCollectionCreate,
+    VocabularyCollectionRead,
+    VocabularyCollectionUpdate,
+    VocabularyCreate,
+    VocabularyRead,
+)
+from app.services.vocabulary_collections import (
+    VocabularyCollectionError,
+    add_word,
+    create_collection,
+    list_collections,
+    rename_collection,
+)
 
 router = APIRouter(prefix="/vocabulary", tags=["生词本"])
+
+
+@router.get("/collections", response_model=list[VocabularyCollectionRead])
+def collection_list(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    return list_collections(db, user_id=current_user.id)
+
+
+@router.post(
+    "/collections",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+)
+def collection_create(
+    payload: VocabularyCollectionCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return create_collection(
+            db,
+            user_id=current_user.id,
+            name=payload.name,
+            description=payload.description,
+        )
+    except VocabularyCollectionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.patch("/collections/{collection_id}", response_model=dict)
+def collection_rename(
+    collection_id: int,
+    payload: VocabularyCollectionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return rename_collection(
+            db,
+            user_id=current_user.id,
+            collection_id=collection_id,
+            name=payload.name,
+        )
+    except VocabularyCollectionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def serialize_item(item: VocabularyItem, mastery_score: int = 0) -> VocabularyRead:
@@ -74,6 +133,7 @@ def add_vocabulary(
     db.commit()
     db.refresh(item)
     item.word = word
+    add_word(db, user=current_user, term=word.term)
     return serialize_item(item)
 
 
@@ -93,4 +153,3 @@ def remove_vocabulary(
     db.delete(item)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-

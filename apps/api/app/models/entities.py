@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import (
     JSON,
     Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -34,6 +35,7 @@ class User(Base):
     nickname: Mapped[str] = mapped_column(String(80))
     level: Mapped[str] = mapped_column(String(20), default="B1")
     daily_new_words: Mapped[int] = mapped_column(Integer, default=10)
+    timezone: Mapped[str] = mapped_column(String(64), default="Asia/Shanghai")
     selected_wordbook_id: Mapped[int | None] = mapped_column(ForeignKey("wordbooks.id"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -56,6 +58,89 @@ class AIProviderConfig(Base):
     model: Mapped[str] = mapped_column(String(120))
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class AIConversation(Base):
+    __tablename__ = "ai_conversations"
+    __table_args__ = (Index("ix_ai_conversations_user_updated", "user_id", "updated_at"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    title: Mapped[str] = mapped_column(String(120), default="新对话")
+    provider: Mapped[str] = mapped_column(String(40))
+    model: Mapped[str] = mapped_column(String(120))
+    summary: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    messages: Mapped[list[AIMessage]] = relationship(
+        back_populates="conversation", cascade="all, delete-orphan", order_by="AIMessage.id"
+    )
+
+
+class AIMessage(Base):
+    __tablename__ = "ai_messages"
+    __table_args__ = (Index("ix_ai_messages_conversation_created", "conversation_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(
+        ForeignKey("ai_conversations.id", ondelete="CASCADE")
+    )
+    role: Mapped[str] = mapped_column(String(20))
+    content: Mapped[str] = mapped_column(Text, default="")
+    tool_call_id: Mapped[str | None] = mapped_column(String(160))
+    tool_calls: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    provider_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    conversation: Mapped[AIConversation] = relationship(back_populates="messages")
+
+
+class AIToolRun(Base):
+    __tablename__ = "ai_tool_runs"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_ai_tool_runs_idempotency"),
+        Index("ix_ai_tool_runs_conversation", "conversation_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(
+        ForeignKey("ai_conversations.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    tool_call_id: Mapped[str] = mapped_column(String(160))
+    tool_name: Mapped[str] = mapped_column(String(100))
+    arguments: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(30), default="running")
+    result: Mapped[dict | None] = mapped_column(JSON)
+    result_summary: Mapped[str] = mapped_column(String(500), default="")
+    requires_confirmation: Mapped[bool] = mapped_column(Boolean, default=False)
+    idempotency_key: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class AIUserMemory(Base):
+    __tablename__ = "ai_user_memories"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_ai_user_memory_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    key: Mapped[str] = mapped_column(String(80))
+    value: Mapped[str] = mapped_column(String(500))
+    source: Mapped[str] = mapped_column(String(40), default="explicit")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
@@ -156,6 +241,83 @@ class VocabularyItem(Base):
     word: Mapped[Word] = relationship()
 
 
+class VocabularyCollection(Base):
+    __tablename__ = "vocabulary_collections"
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="uq_vocabulary_collection_user_name"),
+        Index("ix_vocabulary_collections_user", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(80))
+    description: Mapped[str] = mapped_column(String(300), default="")
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class VocabularyCollectionItem(Base):
+    __tablename__ = "vocabulary_collection_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "collection_id", "vocabulary_item_id", name="uq_vocabulary_collection_item"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    collection_id: Mapped[int] = mapped_column(
+        ForeignKey("vocabulary_collections.id", ondelete="CASCADE"), index=True
+    )
+    vocabulary_item_id: Mapped[int] = mapped_column(
+        ForeignKey("vocabulary_items.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class DailyStudyPlan(Base):
+    __tablename__ = "daily_study_plans"
+    __table_args__ = (
+        UniqueConstraint("user_id", "plan_date", name="uq_daily_study_plan_user_date"),
+        Index("ix_daily_study_plan_user_date", "user_id", "plan_date"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    plan_date: Mapped[date] = mapped_column(Date)
+    timezone: Mapped[str] = mapped_column(String(64))
+    algorithm_version: Mapped[str] = mapped_column(String(30), default="v1")
+    is_forecast: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    items: Mapped[list[DailyStudyPlanItem]] = relationship(
+        back_populates="plan",
+        cascade="all, delete-orphan",
+        order_by="DailyStudyPlanItem.position",
+    )
+
+
+class DailyStudyPlanItem(Base):
+    __tablename__ = "daily_study_plan_items"
+    __table_args__ = (
+        UniqueConstraint("plan_id", "word_id", "item_type", name="uq_daily_plan_word_type"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    plan_id: Mapped[int] = mapped_column(
+        ForeignKey("daily_study_plans.id", ondelete="CASCADE"), index=True
+    )
+    word_id: Mapped[int] = mapped_column(ForeignKey("words.id", ondelete="CASCADE"))
+    item_type: Mapped[str] = mapped_column(String(20))
+    position: Mapped[int] = mapped_column(Integer)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    plan: Mapped[DailyStudyPlan] = relationship(back_populates="items")
+    word: Mapped[Word] = relationship()
+
+
 class Article(Base):
     __tablename__ = "articles"
 
@@ -168,6 +330,11 @@ class Article(Base):
     read_minutes: Mapped[int] = mapped_column(Integer, default=5)
     cover_gradient: Mapped[str] = mapped_column(String(120), default="forest")
     is_published: Mapped[bool] = mapped_column(Boolean, default=True)
+    owner_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    source_type: Mapped[str] = mapped_column(String(30), default="seed")
+    generation_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     sentences: Mapped[list[ArticleSentence]] = relationship(

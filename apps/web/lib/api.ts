@@ -36,3 +36,53 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+export interface SSEMessage {
+  event: string;
+  data: Record<string, unknown>;
+}
+
+export async function streamApi(
+  path: string,
+  body: unknown,
+  onEvent: (message: SSEMessage) => void,
+  signal?: AbortSignal,
+) {
+  const token = getToken();
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+    signal,
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    if (response.status === 401) clearToken();
+    throw new ApiError(data?.detail || "请求失败，请稍后重试", response.status);
+  }
+  if (!response.body) throw new ApiError("浏览器不支持流式响应", 500);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, "\n");
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() || "";
+    for (const block of blocks) {
+      let event = "message";
+      const dataLines: string[] = [];
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+      }
+      if (dataLines.length) {
+        onEvent({ event, data: JSON.parse(dataLines.join("\n")) });
+      }
+    }
+    if (done) break;
+  }
+}

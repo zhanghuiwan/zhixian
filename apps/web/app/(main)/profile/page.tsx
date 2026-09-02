@@ -11,6 +11,7 @@ export default function ProfilePage() {
   const [nickname, setNickname] = useState("");
   const [level, setLevel] = useState("B1");
   const [daily, setDaily] = useState(10);
+  const [timezone, setTimezone] = useState("Asia/Shanghai");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export default function ProfilePage() {
       setNickname(user.nickname);
       setLevel(user.level);
       setDaily(user.daily_new_words);
+      setTimezone(user.timezone);
     }
   }, [user]);
 
@@ -26,7 +28,7 @@ export default function ProfilePage() {
     setMessage("");
     await api("/users/me", {
       method: "PATCH",
-      body: JSON.stringify({ nickname, level, daily_new_words: daily }),
+      body: JSON.stringify({ nickname, level, daily_new_words: daily, timezone }),
     });
     await refreshUser();
     setMessage("设置已保存");
@@ -79,6 +81,17 @@ export default function ProfilePage() {
               <input type="range" min="1" max="30" value={daily} onChange={(event) => setDaily(Number(event.target.value))} />
               <strong>{daily} 词</strong>
             </div>
+          </label>
+          <label>
+            学习日期时区
+            <select value={timezone} onChange={(event) => setTimezone(event.target.value)}>
+              <option value="Asia/Shanghai">中国标准时间（上海）</option>
+              <option value="Asia/Hong_Kong">香港时间</option>
+              <option value="Asia/Tokyo">日本时间（东京）</option>
+              <option value="Europe/London">英国时间（伦敦）</option>
+              <option value="America/New_York">美国东部时间（纽约）</option>
+              <option value="America/Los_Angeles">美国西部时间（洛杉矶）</option>
+            </select>
           </label>
           {message && <p className="success-message">{message}</p>}
           <button className="primary-button" type="submit">保存设置</button>

@@ -4,6 +4,7 @@ export interface User {
   nickname: string;
   level: string;
   daily_new_words: number;
+  timezone: string;
   selected_wordbook_id: number | null;
   created_at: string;
 }
@@ -115,4 +116,37 @@ export interface AIProviderConnection {
   provider: AIProviderName;
   model: string;
   latency_ms: number;
+}
+
+export interface AIConversation {
+  id: number;
+  title: string;
+  provider: AIProviderName;
+  model: string;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  message_count: number;
+}
+
+export interface AIMessage {
+  id: number;
+  role: "user" | "assistant" | "tool";
+  content: string;
+  tool_call_id: string | null;
+  tool_calls: Record<string, unknown>[];
+  prompt_tokens: number;
+  completion_tokens: number;
+  created_at: string;
+}
+
+export interface AIToolRun {
+  id: number;
+  tool_name: string;
+  status: "pending_confirmation" | "running" | "succeeded" | "failed" | "cancelled";
+  arguments: Record<string, unknown>;
+  result: Record<string, unknown> | null;
+  result_summary: string;
+  requires_confirmation: boolean;
+  created_at: string;
 }

@@ -50,7 +50,9 @@ def get_article(
     article = db.scalar(
         select(Article).options(selectinload(Article.sentences)).where(Article.id == article_id)
     )
-    if article is None or not article.is_published:
+    if article is None or (
+        not article.is_published and article.owner_user_id != current_user.id
+    ):
         raise HTTPException(status_code=404, detail="文章不存在")
     bookmark_ids = set(
         db.scalars(
@@ -143,4 +145,3 @@ def remove_bookmark(
         db.delete(bookmark)
         db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-

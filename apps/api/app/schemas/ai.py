@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ProviderName = Literal["deepseek", "minimax"]
 
@@ -61,3 +61,75 @@ class AIProviderConnectionRead(BaseModel):
     model: str
     latency_ms: int
 
+
+class AIConversationCreate(BaseModel):
+    title: str = Field(default="新对话", min_length=1, max_length=120)
+    provider: ProviderName | None = None
+
+
+class AIConversationUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    archived: bool | None = None
+
+
+class AIConversationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    provider: ProviderName
+    model: str
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+    message_count: int = 0
+
+
+class AIMessageRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    role: str
+    content: str
+    tool_call_id: str | None
+    tool_calls: list[dict]
+    prompt_tokens: int
+    completion_tokens: int
+    created_at: datetime
+
+
+class AIChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    conversation_id: int | None = Field(default=None, ge=1)
+    provider: ProviderName | None = None
+
+    @field_validator("message")
+    @classmethod
+    def normalize_message(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("消息不能为空")
+        return normalized
+
+
+class AIToolConfirmation(BaseModel):
+    confirmed: bool
+
+
+class AIToolConfirmationResult(BaseModel):
+    id: int
+    status: str
+    tool_name: str
+    result: dict | None
+    result_summary: str
+
+
+class AIToolRunRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    tool_name: str
+    status: str
+    arguments: dict
+    result: dict | None
+    result_summary: str
+    requires_confirmation: bool
+    created_at: datetime

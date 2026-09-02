@@ -11,7 +11,7 @@ Authorization: Bearer <access_token>
 - `POST /auth/register` 注册
 - `POST /auth/login` 登录
 - `GET /users/me` 当前资料
-- `PATCH /users/me` 更新昵称、等级和每日目标
+- `PATCH /users/me` 更新昵称、等级、每日目标和 IANA 时区
 
 ## 仪表盘
 
@@ -27,6 +27,21 @@ Authorization: Bearer <access_token>
 
 保存 API Key 前，服务器必须配置 `AI_CREDENTIAL_ENCRYPTION_KEY`。完整 Key 不会通过读取接口返回。
 
+## AI 学习助手
+
+- `GET /ai/conversations` 当前用户的未归档会话
+- `POST /ai/conversations` 创建会话
+- `GET /ai/conversations/{id}/messages` 获取会话消息
+- `GET /ai/conversations/{id}/tool-runs` 获取并恢复工具执行/确认状态
+- `PATCH /ai/conversations/{id}` 重命名或归档
+- `DELETE /ai/conversations/{id}` 删除会话
+- `POST /ai/chat/stream` 发送消息并接收 SSE 事件
+- `POST /ai/tool-runs/{id}/confirm` 确认或取消危险操作
+
+流式接口可能返回会话创建、文本增量、工具开始/完成/失败、确认、导航、消息完成、用量和错误事件。
+
+模型只能选择后端注册的学习工具。数据库读取和写入始终按当前用户隔离；删除生词本必须通过确认端点执行原始已校验参数。
+
 ## 词书与学习
 
 - `GET /wordbooks` 词书列表和用户进度
@@ -41,6 +56,9 @@ Authorization: Bearer <access_token>
 - `GET /vocabulary?q=` 查询生词
 - `POST /vocabulary` 加入生词
 - `DELETE /vocabulary/{word_id}` 删除生词
+- `GET /vocabulary/collections` 多生词本列表
+- `POST /vocabulary/collections` 新建生词本
+- `PATCH /vocabulary/collections/{id}` 重命名生词本
 
 ## 文章
 

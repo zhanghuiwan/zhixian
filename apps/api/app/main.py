@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import ai, articles, auth, dashboard, study, users, vocabulary, wordbooks
+from app.api.routes import agent, ai, articles, auth, dashboard, study, users, vocabulary, wordbooks
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import engine
@@ -41,6 +41,7 @@ for route in [
     vocabulary.router,
     articles.router,
     ai.router,
+    agent.router,
 ]:
     app.include_router(route, prefix="/api/v1")
 

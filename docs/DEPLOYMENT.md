@@ -30,7 +30,10 @@ python3 -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_
 docker compose up -d --build
 docker compose ps
 curl http://127.0.0.1/api/v1/health
+docker compose exec -T api alembic current
 ```
+
+第二阶段数据库版本应显示 `0003 (head)`。
 
 生产环境保持 `CREATE_DEMO_USER=false`，通过注册页创建账号，避免公开默认密码。
 
@@ -42,6 +45,8 @@ git pull --ff-only origin main
 docker compose up -d --build
 docker image prune -f
 ```
+
+第二阶段发布前必须确认服务器原有 `AI_CREDENTIAL_ENCRYPTION_KEY` 已备份，不要重新生成并覆盖，否则旧的用户模型 Key 将无法解密。更新后再次检查容器状态、Alembic 版本和健康接口。
 
 部署前建议先执行备份。生产服务器不要直接编辑仓库文件；所有代码改动从本地推送 GitHub。
 

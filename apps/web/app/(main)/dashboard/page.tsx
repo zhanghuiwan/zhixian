@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { BookMarked, BookOpenText, ChevronRight, Flame, LibraryBig, Sparkles } from "@/components/icons";
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { BookMarked, BookOpenText, ChevronRight, Flame, LibraryBig, Send, Sparkles } from "@/components/icons";
 import { InlineLoader } from "@/components/feedback";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
@@ -14,6 +15,8 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [data, setData] = useState<Dashboard | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [prompt, setPrompt] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     Promise.all([api<Dashboard>("/dashboard"), api<Article[]>("/articles")]).then(([dashboard, list]) => {
@@ -25,6 +28,10 @@ export default function DashboardPage() {
   if (!data) return <InlineLoader />;
   const hour = new Date().getHours();
   const greeting = hour < 11 ? "早上好" : hour < 18 ? "下午好" : "晚上好";
+  function ask(event: FormEvent) {
+    event.preventDefault();
+    if (prompt.trim()) router.push(`/assistant?message=${encodeURIComponent(prompt.trim())}`);
+  }
 
   return (
     <div className="page dashboard-page">
@@ -32,6 +39,17 @@ export default function DashboardPage() {
         <div><span className="eyebrow">{new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "long" }).format(new Date())}</span><h1>{greeting}，{user?.nickname}</h1><p>不必学得很多，记得回来就好。</p></div>
         <div className="streak-pill"><Flame size={20} fill="currentColor" /><strong>{data.streak_days}</strong><span>天连续学习</span></div>
       </header>
+
+      <section className="ai-home-card">
+        <div className="ai-home-heading"><span><Sparkles size={20} /></span><div><strong>知闲 AI</strong><small>问学习记录、制定复习计划，也可以直接让我帮你操作</small></div></div>
+        <form onSubmit={ask} className="ai-home-composer">
+          <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="例如：昨天复习了哪些词？把 wander 加入旅行生词本" rows={2} />
+          <button type="submit" aria-label="发送给知闲 AI"><Send size={18} /></button>
+        </form>
+        <div className="ai-home-prompts">
+          {["今天复习什么？", "分析我最近的易错词", "生成一篇 B1 短文", "开始学习"].map((item) => <button key={item} onClick={() => router.push(`/assistant?message=${encodeURIComponent(item)}`)}>{item}</button>)}
+        </div>
+      </section>
 
       <section className="today-hero">
         <div className="hero-copy"><span className="eyebrow light-text">TODAY&apos;S PRACTICE</span><h2>今天，从 {data.due_today || "几"} 个词开始</h2><p>{data.due_today > 0 ? `有 ${data.due_today} 个单词等待复习。花十分钟，让记忆重新清晰。` : "复习已清空，可以认识一些新词，给今天留一点新鲜感。"}</p><Link href="/learn" className="cream-button">开始学习 <ChevronRight size={18} /></Link></div>
@@ -63,4 +81,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

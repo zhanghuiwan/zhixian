@@ -262,3 +262,70 @@ def test_provider_adapter_maps_authentication_and_model_access_errors(monkeypatc
         pass
     else:
         raise AssertionError("missing model should be mapped to ProviderResponseError")
+
+
+def test_provider_stream_normalizes_text_tool_chunks_and_usage(monkeypatch):
+    lines = [
+        'data: {"choices":[{"delta":{"content":"你"}}]}',
+        'data: {"choices":[{"delta":{"content":"好"}}]}',
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","function":{"name":"lookup_","arguments":"{\\\"term\\\":"}}]}}]}',
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"word","arguments":"\\\"wander\\\"}"}}]},"finish_reason":"tool_calls"}]}',
+        'data: {"choices":[],"usage":{"prompt_tokens":9,"completion_tokens":4}}',
+        "data: [DONE]",
+    ]
+    captured: dict = {}
+
+    class FakeStreamResponse:
+        status_code = 200
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            return None
+
+        async def aiter_lines(self):
+            for line in lines:
+                yield line
+
+    class FakeClient:
+        def __init__(self, **_):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            return None
+
+        def stream(self, method, url, *, headers, json):
+            captured.update(method=method, url=url, headers=headers, payload=json)
+            return FakeStreamResponse()
+
+    monkeypatch.setattr(
+        "app.services.ai.providers.openai_compatible.httpx.AsyncClient", FakeClient
+    )
+    provider = build_provider(
+        "minimax", api_key="minimax-secret", model="MiniMax-M3"
+    )
+
+    async def collect():
+        return [
+            event
+            async for event in provider.stream_chat(
+                messages=[{"role": "user", "content": "查词"}],
+                tools=[{"type": "function", "function": {"name": "lookup_word"}}],
+            )
+        ]
+
+    events = asyncio.run(collect())
+    assert "".join(item.content for item in events if item.kind == "text") == "你好"
+    assert "".join(item.tool_name for item in events if item.kind == "tool_call") == "lookup_word"
+    assert "".join(
+        item.tool_arguments for item in events if item.kind == "tool_call"
+    ) == '{"term":"wander"}'
+    usage = next(item for item in events if item.kind == "usage")
+    assert (usage.prompt_tokens, usage.completion_tokens) == (9, 4)
+    assert captured["payload"]["stream"] is True
+    assert captured["payload"]["reasoning_split"] is True
+    assert "secret" not in captured["url"]

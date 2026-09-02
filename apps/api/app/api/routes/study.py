@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models import StudyReview, User, UserWordProgress, VocabularyItem, Word, WordbookWord
 from app.schemas import ReviewCreate, ReviewResult, StudyQueueItem, StudyQueueResponse
 from app.services.spaced_repetition import calculate_schedule
+from app.services.learning_insights import mark_plan_item_completed
 
 router = APIRouter(prefix="/study", tags=["学习"])
 
@@ -110,6 +111,9 @@ def submit_review(
             next_interval=schedule.interval_days,
             reviewed_at=now,
         )
+    )
+    mark_plan_item_completed(
+        db, user=current_user, word_id=payload.word_id, reviewed_at=now
     )
     db.commit()
     db.refresh(progress)
