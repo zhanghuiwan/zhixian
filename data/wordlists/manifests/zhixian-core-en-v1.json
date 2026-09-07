@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "slug": "zhixian-core-en-v1",
+  "display_name": "知闲 · 核心词汇",
+  "description": "四六级、考研英语一/英语二与雅思词汇合并去重的英文词库",
+  "level": "CET-4–IELTS",
+  "language": "en",
+  "cover_color": "#345C4B",
+  "transform_version": 1,
+  "merge_strategy": "first-source-wins",
+  "include_phrases": true,
+  "source_repository": "https://github.com/RealKai42/qwerty-learner",
+  "source_commit": "122acd90b4079dd040c28a14356447f6553cff83",
+  "bundle_file": "normalized/zhixian-core-en-v1.jsonl",
+  "bundle_sha256": "5d1ede6b6eaa2a415f6182bbdd57a8cdb68282a8803b87fef9c9e43646fcc3fe",
+  "bundle_count": 7416,
+  "approved_at": "2026-09-08",
+  "approved_by": "project-owner",
+  "notice": "data/wordlists/NOTICE.md",
+  "sources": [
+    {
+      "source_key": "qwerty-cet4-122acd90",
+      "slug": "cet4",
+      "display_name": "CET-4",
+      "source_file": "public/dicts/CET4_T.json",
+      "declared_count": 2607,
+      "source_sha256": "733dd9f9c05ed9e3c35fbd65608e4e061e2d34c461723e057513e346562992de",
+      "license_status": "approved",
+      "license_evidence": [
+        "data/wordlists/licenses/qwerty-learner-GPL-3.0.txt",
+        "data/wordlists/NOTICE.md"
+      ]
+    },
+    {
+      "source_key": "qwerty-cet6-122acd90",
+      "slug": "cet6",
+      "display_name": "CET-6",
+      "source_file": "public/dicts/CET6_T.json",
+      "declared_count": 2345,
+      "source_sha256": "ed5e76b945b7c7bc567a75d44a6eaeda137c767960121057deab52593e245d6e",
+      "license_status": "approved",
+      "license_evidence": [
+        "data/wordlists/licenses/qwerty-learner-GPL-3.0.txt",
+        "data/wordlists/NOTICE.md"
+      ]
+    },
+    {
+      "source_key": "qwerty-kaoyan-122acd90",
+      "slug": "kaoyan",
+      "display_name": "考研通用词汇",
+      "source_file": "public/dicts/KaoYan_3_T.json",
+      "declared_count": 3728,
+      "source_sha256": "2997157b54912bb56118cf3153fb891c452fbfe813da8d21bb219ea7f2829090",
+      "license_status": "approved",
+      "license_evidence": [
+        "data/wordlists/licenses/qwerty-learner-GPL-3.0.txt",
+        "data/wordlists/NOTICE.md"
+      ]
+    },
+    {
+      "source_key": "qwerty-kaoyan-english-1-122acd90",
+      "slug": "kaoyan-english-1",
+      "display_name": "考研英语一",
+      "source_file": "public/dicts/DanCiDeMimi_1.json",
+      "declared_count": 5657,
+      "source_sha256": "9f9e9f5dfa3a64a6d857545193713b1c2c9e75ec374fa8f0629b1db9138c417c",
+      "license_status": "approved",
+      "license_evidence": [
+        "data/wordlists/licenses/qwerty-learner-GPL-3.0.txt",
+        "data/wordlists/NOTICE.md"
+      ]
+    },
+    {
+      "source_key": "qwerty-kaoyan-english-2-122acd90",
+      "slug": "kaoyan-english-2",
+      "display_name": "考研英语二",
+      "source_file": "public/dicts/DanCiDeMimi_2.json",
+      "declared_count": 3827,
+      "source_sha256": "7f55840e5936ecf72e14648a8f90635117e89765e648c6447a10e273f3501611",
+      "license_status": "approved",
+      "license_evidence": [
+        "data/wordlists/licenses/qwerty-learner-GPL-3.0.txt",
+        "data/wordlists/NOTICE.md"
+      ]
+    },
+    {
+      "source_key": "qwerty-ielts-122acd90",
+      "slug": "ielts",
+      "display_name": "IELTS",
+      "source_file": "public/dicts/IELTS_3_T.json",
+      "declared_count": 3575,
+      "source_sha256": "63f64c79c96270f2a74f7bfebe952efe1d4c1f09b887bc3e4560a989b8873ad1",
+      "license_status": "approved",
+      "license_evidence": [
+        "data/wordlists/licenses/qwerty-learner-GPL-3.0.txt",
+        "data/wordlists/NOTICE.md"
+      ]
+    }
+  ]
+}

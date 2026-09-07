@@ -23,6 +23,7 @@ data/uploads/*
 !data/uploads/.gitkeep
 data/backups/*
 !data/backups/.gitkeep
+data/wordlists/raw/
 
 # IDE / OS
 .idea/
@@ -33,4 +34,3 @@ Thumbs.db
 # Test reports
 coverage/
 htmlcov/
-

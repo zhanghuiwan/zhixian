@@ -164,6 +164,7 @@ class Wordbook(Base):
     __tablename__ = "wordbooks"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    slug: Mapped[str | None] = mapped_column(String(120), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(120), unique=True)
     description: Mapped[str] = mapped_column(String(500))
     level: Mapped[str] = mapped_column(String(30))
@@ -186,6 +187,45 @@ class WordbookWord(Base):
     position: Mapped[int] = mapped_column(Integer)
 
     wordbook: Mapped[Wordbook] = relationship(back_populates="words")
+    word: Mapped[Word] = relationship()
+
+
+class WordlistSource(Base):
+    __tablename__ = "wordlist_sources"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_key: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(120))
+    repository_url: Mapped[str] = mapped_column(String(500))
+    repository_commit: Mapped[str] = mapped_column(String(64))
+    source_file: Mapped[str] = mapped_column(String(500))
+    source_sha256: Mapped[str] = mapped_column(String(64))
+    declared_count: Mapped[int] = mapped_column(Integer)
+    parsed_count: Mapped[int] = mapped_column(Integer)
+    license_status: Mapped[str] = mapped_column(String(40))
+    transform_version: Mapped[int] = mapped_column(Integer, default=1)
+    imported_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+    entries: Mapped[list[WordlistSourceEntry]] = relationship(
+        back_populates="source", cascade="all, delete-orphan"
+    )
+
+
+class WordlistSourceEntry(Base):
+    __tablename__ = "wordlist_source_entries"
+    __table_args__ = (
+        UniqueConstraint("source_id", "word_id", name="uq_wordlist_source_word"),
+        Index("ix_wordlist_source_entries_word_id", "word_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_id: Mapped[int] = mapped_column(
+        ForeignKey("wordlist_sources.id", ondelete="CASCADE"), index=True
+    )
+    word_id: Mapped[int] = mapped_column(ForeignKey("words.id", ondelete="CASCADE"))
+    source_position: Mapped[int] = mapped_column(Integer)
+
+    source: Mapped[WordlistSource] = relationship(back_populates="entries")
     word: Mapped[Word] = relationship()
 
 

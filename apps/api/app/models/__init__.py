@@ -18,6 +18,8 @@ from app.models.entities import (
     Word,
     Wordbook,
     WordbookWord,
+    WordlistSource,
+    WordlistSourceEntry,
 )
 
 __all__ = [
@@ -40,4 +42,6 @@ __all__ = [
     "Word",
     "Wordbook",
     "WordbookWord",
+    "WordlistSource",
+    "WordlistSourceEntry",
 ]

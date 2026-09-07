@@ -106,16 +106,19 @@ def seed_database() -> None:
 
         if (db.scalar(select(func.count()).select_from(Wordbook)) or 0) == 0:
             words = db.scalars(select(Word).order_by(Word.id)).all()
-            wordbooks = [
-                Wordbook(name="知闲 · 核心词汇", description="从阅读与日常表达中精选的基础核心词", level="A2–B1", cover_color="#345C4B"),
-                Wordbook(name="阅读进阶词汇", description="帮助理解长文章与抽象表达的进阶词汇", level="B1–B2", cover_color="#C66B46"),
-            ]
-            db.add_all(wordbooks)
+            wordbook = Wordbook(
+                slug="zhixian-core-en-v1",
+                name="知闲 · 核心词汇",
+                description=(
+                    "四六级、考研英语一/英语二与雅思词汇合并去重的英文词库"
+                ),
+                level="CET-4–IELTS",
+                cover_color="#345C4B",
+            )
+            db.add(wordbook)
             db.flush()
-            for index, word in enumerate(words[:16], 1):
-                db.add(WordbookWord(wordbook_id=wordbooks[0].id, word_id=word.id, position=index))
-            for index, word in enumerate(words[8:], 1):
-                db.add(WordbookWord(wordbook_id=wordbooks[1].id, word_id=word.id, position=index))
+            for index, word in enumerate(words, 1):
+                db.add(WordbookWord(wordbook_id=wordbook.id, word_id=word.id, position=index))
 
         if (db.scalar(select(func.count()).select_from(Article)) or 0) == 0:
             for source in ARTICLES:

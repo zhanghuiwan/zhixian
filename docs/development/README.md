@@ -2,22 +2,24 @@
 
 本文用于规范知闲在不同电脑上的开发、测试、同步和部署。目标是让新电脑可以从 GitHub 重建开发环境，同时避免密钥、数据库和用户文件进入仓库。
 
+进入仓库后先阅读根目录 `AGENTS.md`、`docs/README.md` 和 `docs/PROJECT_STATUS.md`。本文负责环境与同步流程；编码、测试、安全和词库规则分别以对应专项文档为准。
+
 ## 1. 核心原则
 
 1. GitHub 是源代码的唯一同步中心，不用网盘、U 盘或复制整个项目目录同步代码。
 2. 日常开发在本地完成；阿里云服务器只运行 `main` 的可部署版本。
 3. `main` 必须保持可构建、可测试、可部署；较大功能使用短生命周期分支。
-4. 数据库、上传文件、备份和密钥不是源代码，必须独立管理。
+4. 运行时数据库、上传文件、备份和密钥必须独立管理；`data/wordlists` 中的规范化基础词库、manifest、报告和许可说明是版本资产，必须进入 Git。
 5. 离开一台电脑前先提交并推送；换电脑后先拉取，再开始修改。
 6. 密钥一旦进入 Git 历史，应立即撤销或轮换，不能只删除工作区文件。
 
 ## 2. 新电脑首次准备
 
-安装 Git、Node.js 24、Python 3.13（或 Conda）和 Docker Desktop/Docker Engine，然后配置 Git：
+安装 Git、Node.js 24、Python 3.13（或 Conda）和 Docker Desktop/Docker Engine。完成下一节克隆并进入仓库后，为本项目配置自己的 Git 身份，避免覆盖整台机器的全局身份：
 
 ```bash
-git config --global user.name "zhanghuiwan"
-git config --global user.email "543565403@qq.com"
+git config --local user.name "<your-name>"
+git config --local user.email "<your-email>"
 ```
 
 每台电脑独立配置 GitHub 认证。长期使用优先选择 SSH 密钥或系统凭据管理器；临时 PAT 只能放在仓库外部，不能写入环境模板、脚本、远端 URL 或提交信息。
@@ -121,11 +123,15 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r apps/api/requirements.txt
 cd apps/api
 Copy-Item .env.example .env
+..\..\.venv\Scripts\python.exe -m alembic upgrade head
 ..\..\.venv\Scripts\python.exe -m app.db.seed
+..\..\.venv\Scripts\python.exe -m app.db.import_wordlist `
+  --manifest ../../data/wordlists/manifests/zhixian-core-en-v1.json `
+  --apply
 ..\..\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 ```
 
-源码开发默认使用 SQLite。本机 SQLite 数据不会通过 GitHub 同步。
+源码开发默认使用 SQLite。本机 SQLite 数据不会通过 GitHub 同步，但上述导入命令会从 Git 内的数据包重建 7,416 个基础词条，不需要另行克隆 qwerty-learner。
 
 前端另开终端：
 
@@ -147,6 +153,8 @@ docker compose up -d --build
 docker compose ps
 Invoke-RestMethod http://localhost/api/v1/health
 ```
+
+API 容器入口会自动执行 Alembic、seed 和词库数据包导入。导入是幂等的，重启容器不会重复创建单词。
 
 查看日志：
 
@@ -276,16 +284,16 @@ Remove-Item Env:MINIMAX_MODEL
 
 GitHub 不保存数据库、PDF、图片、OCR 文件、TTS 缓存、日志和备份。数据库保存文件元数据和路径，文件本体保存在挂载目录。
 
-生产环境计划使用：
+当前部署约定和后续预留路径：
 
 ```text
-/data/zhixian/uploads
-/data/zhixian/audio
-/data/zhixian/temp
+/opt/zhixian/data/uploads   # 当前 Compose 实际宿主机路径
+/data/zhixian/audio         # 后续预留，尚未接入
+/data/zhixian/temp          # 后续预留，尚未接入
 /data/zhixian/backups
 ```
 
-已知注意项：当前 `compose.yaml` 使用项目相对上传目录，而备份脚本默认使用 `/data/zhixian/uploads`。正式部署前必须统一路径，否则上传文件可能未被备份。
+已知注意项：当前 `compose.yaml` 使用项目相对上传目录，而备份脚本默认使用 `/data/zhixian/uploads`。按 `docs/DEPLOYMENT.md` 显式传入 `/opt/zhixian/data/uploads`；正式启用上传前必须在代码中统一路径，否则上传文件可能未被备份。
 
 没有对象存储时，必须限制文件类型、大小、用户配额和临时文件保留时间，并至少每周把一份备份下载到另一台电脑。
 
@@ -295,6 +303,8 @@ GitHub 不保存数据库、PDF、图片、OCR 文件、TTS 缓存、日志和�
 
 ```bash
 cd /opt/zhixian
+POSTGRES_USER=zhixian POSTGRES_DB=zhixian \
+ZHIXIAN_UPLOAD_DIR=/opt/zhixian/data/uploads \
 bash scripts/backup.sh
 git pull --ff-only origin main
 docker compose up -d --build

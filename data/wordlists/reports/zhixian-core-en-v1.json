@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "wordbook_slug": "zhixian-core-en-v1",
+  "source_repository": "https://github.com/RealKai42/qwerty-learner",
+  "source_commit": "122acd90b4079dd040c28a14356447f6553cff83",
+  "license_status": "approved",
+  "bundle_file": "normalized/zhixian-core-en-v1.jsonl",
+  "bundle_sha256": "5d1ede6b6eaa2a415f6182bbdd57a8cdb68282a8803b87fef9c9e43646fcc3fe",
+  "bundle_count": 7416,
+  "approved_at": "2026-09-08",
+  "approved_by": "project-owner",
+  "merge_strategy": "first-source-wins",
+  "normalization": "Unicode NFKC + trim + collapse spaces + lowercase",
+  "ordering": "manifest source order, then first appearance in each source",
+  "sources": [
+    {"slug": "cet4", "parsed": 2607, "unique": 2607, "duplicates": 0},
+    {"slug": "cet6", "parsed": 2345, "unique": 2345, "duplicates": 0},
+    {"slug": "kaoyan", "parsed": 3728, "unique": 3727, "duplicates": 1},
+    {"slug": "kaoyan-english-1", "parsed": 5657, "unique": 4264, "duplicates": 1393},
+    {"slug": "kaoyan-english-2", "parsed": 3827, "unique": 2854, "duplicates": 973},
+    {"slug": "ielts", "parsed": 3575, "unique": 3575, "duplicates": 0}
+  ],
+  "totals": {
+    "source_rows": 21739,
+    "source_unique_sum": 19372,
+    "within_source_duplicates": 2367,
+    "cross_source_duplicates": 11956,
+    "final_unique_terms": 7416,
+    "translation_conflicts": 4036,
+    "phonetic_conflicts": 2645,
+    "unique_phrases": 29
+  },
+  "source_membership_distribution": {
+    "1": 2394,
+    "2": 1837,
+    "3": 1139,
+    "4": 830,
+    "5": 729,
+    "6": 487
+  },
+  "verified_import": {
+    "environments": ["SQLite", "PostgreSQL 17"],
+    "alembic_head": "0004",
+    "wordbook_members": 7416,
+    "source_memberships": 19372,
+    "published_wordbooks": 1,
+    "second_import_changes": 0
+  }
+}
