@@ -39,13 +39,43 @@ git status
 git clone https://github.com/zhanghuiwan/zhixian.git
 ```
 
-如果出现 `detected dubious ownership`，只信任项目的明确绝对路径，不要信任整个磁盘：
+如果出现 `detected dubious ownership`，又不希望写入全局信任列表，可以只对本次命令传入明确的项目绝对路径：
 
 ```bash
-git config --global --add safe.directory D:/project/zhixian
+git -c safe.directory=D:/project/zhixian status
+git -c safe.directory=D:/project/zhixian pull --ff-only origin main
 ```
 
-在其他目录克隆时，把路径改成实际项目路径。
+在其他目录克隆时，把路径改成实际项目路径。`-c safe.directory=...` 只对当前这一条 Git 命令生效，不会修改全局 Git 配置；不要把整个磁盘或通配路径加入信任列表。
+
+### 临时使用 Fine-grained PAT 推送
+
+当 SSH 暂时不可用且不希望把 Token 写入凭据管理器时，可以使用仓库外的 Fine-grained PAT 文件临时推送。Token 至少需要对目标仓库授予 `Contents: Read and write`；只有提交包含 `.github/workflows/*` 时才需要 `Workflows: Read and write`。
+
+以下 PowerShell 示例不修改现有 `origin`，不会把 Token 写入 Git 配置或命令历史。把示例路径替换成当前电脑的仓库外 Token 文件：
+
+```powershell
+$pat = (Get-Content -Raw -LiteralPath 'C:\安全目录\github-pat.txt').Trim()
+$basic = [Convert]::ToBase64String(
+  [Text.Encoding]::UTF8.GetBytes("x-access-token:$pat")
+)
+$env:GIT_CONFIG_COUNT = '1'
+$env:GIT_CONFIG_KEY_0 = 'http.https://github.com/.extraheader'
+$env:GIT_CONFIG_VALUE_0 = "AUTHORIZATION: basic $basic"
+
+try {
+  git -c safe.directory=D:/project/zhixian push `
+    https://github.com/zhanghuiwan/zhixian.git main:main
+} finally {
+  Remove-Item Env:GIT_CONFIG_COUNT -ErrorAction SilentlyContinue
+  Remove-Item Env:GIT_CONFIG_KEY_0 -ErrorAction SilentlyContinue
+  Remove-Item Env:GIT_CONFIG_VALUE_0 -ErrorAction SilentlyContinue
+  $pat = $null
+  $basic = $null
+}
+```
+
+Token 文件仍是高敏感凭证：只能保存在仓库外，不能提交、截图、打印或同步到公共网盘。Token 到期、泄露或电脑丢失时，应立即在 GitHub 撤销并重新生成。
 
 ## 4. 环境变量与密钥
 
@@ -297,7 +327,7 @@ git pull --ff-only origin main
 
 ## 14. 常见问题
 
-- Git 所有者不可信：只把实际项目绝对路径加入 `safe.directory`。
+- Git 所有者不可信：优先用 `git -c safe.directory=<项目绝对路径> ...` 仅信任当前命令，不修改全局配置。
 - Docker 找不到 `dockerDesktopLinuxEngine`：启动 Docker Desktop，等待 Linux Engine 就绪。
 - `next-env.d.ts` 自动修改：检查是否只是 `.next/types` 与 `.next/dev/types` 切换，避免提交无意义差异。
 - 新电脑没有旧电脑的学习数据：这是正常现象，GitHub 不同步数据库卷和上传文件。

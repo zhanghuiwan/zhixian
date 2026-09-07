@@ -36,9 +36,9 @@
 - [x] 自动化测试和构建检查
 - [x] Docker Compose、Nginx、健康检查和备份脚本
 
-## 阶段 2：学习 Agent（进行中）
+## 阶段 2：学习 Agent（已完成）
 
-详细设计、数据边界和验收标准见 [第二阶段：知闲学习 Agent](phase-2/README.md)。
+详细设计、数据边界和验收标准见 [第二阶段：知闲学习 Agent](phase-2/README.md)，真实代码的消息生命周期、存储与记忆机制见 [学习 Agent 实现说明](phase-2/AGENT_IMPLEMENTATION.md)。
 
 1. 安全配置 DeepSeek、MiniMax 等模型提供商。
 2. 建立可恢复的流式对话、工具调用和操作审计。
