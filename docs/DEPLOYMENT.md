@@ -36,7 +36,7 @@ curl http://127.0.0.1/api/v1/health
 docker compose exec -T api alembic current
 ```
 
-当前数据库版本应显示 `0004 (head)`。API 容器入口会在迁移和 seed 后，自动校验并幂等导入 Git 内的 `zhixian-core-en-v1` 数据包。新服务器的空 PostgreSQL volume 应得到 7,416 个词书成员；无需在服务器另行克隆 qwerty-learner。
+当前数据库版本应显示 `0005 (head)`。API 容器入口会在迁移和 seed 后，自动校验并幂等导入 Git 内的 `zhixian-core-en-v1` 数据包。新服务器的空 PostgreSQL volume 应得到 7,416 个唯一词典条目、六本已发布系统预设词书和 5 篇默认文章；用户注册时初始化 4 条示例句子收藏。无需在服务器另行克隆 qwerty-learner。
 
 生产环境保持 `CREATE_DEMO_USER=false`，通过注册页创建账号，避免公开默认密码。
 

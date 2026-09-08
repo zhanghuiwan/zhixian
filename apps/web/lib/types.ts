@@ -6,6 +6,7 @@ export interface User {
   daily_new_words: number;
   timezone: string;
   selected_wordbook_id: number | null;
+  selected_collection_id: number | null;
   created_at: string;
 }
 
@@ -37,6 +38,10 @@ export interface StudyQueueItem {
   mode: "new" | "review";
   repetitions: number;
   mastery_score: number;
+  source_kind: "system" | "personal" | "all" | "legacy";
+  source_id: number | null;
+  source_name: string;
+  intervals: Record<"again" | "hard" | "good" | "easy", string>;
 }
 
 export interface Article {
@@ -48,6 +53,10 @@ export interface Article {
   topic: string;
   read_minutes: number;
   cover_gradient: string;
+  source_type: string;
+  is_private: boolean;
+  progress: number;
+  is_completed: boolean;
 }
 
 export interface ArticleSentence {
@@ -60,6 +69,7 @@ export interface ArticleSentence {
 
 export interface ArticleDetail extends Article {
   sentences: ArticleSentence[];
+  last_position: number;
 }
 
 export interface VocabularyItem {
@@ -149,4 +159,62 @@ export interface AIToolRun {
   result_summary: string;
   requires_confirmation: boolean;
   created_at: string;
+}
+
+export interface LibraryBook {
+  id: number;
+  kind: "system" | "personal";
+  name: string;
+  description: string;
+  level: string;
+  cover_color: string;
+  word_count: number;
+  learned_count: number;
+  mastered_count: number;
+  due_count: number;
+  is_selected: boolean;
+  is_default: boolean;
+}
+
+export interface LibraryBookDetail {
+  book: LibraryBook;
+  words: { word: Word; status: "new" | "learning" | "mastered"; mastery_score: number }[];
+  total: number;
+  offset: number;
+}
+
+export interface SentenceCollectionItem {
+  id: number;
+  sentence_id: number | null;
+  article_id: number | null;
+  article_title: string;
+  text: string;
+  translation: string;
+  source_type: string;
+  source_ref: string | null;
+  note: string;
+  tags: string[];
+  is_example: boolean;
+  created_at: string;
+}
+
+export interface DayRecord {
+  date: string;
+  new_count: number;
+  review_count: number;
+  attempts: number;
+  word_count: number;
+  reading_count: number;
+  saved_words: number;
+  saved_sentences: number;
+  books: { name: string; kind: string; id: number | null; word_count: number }[];
+  words: { id: number; term: string; translation: string; rating: string; mode: string }[];
+  articles: { id: number; title: string; percent: number; completed: boolean }[];
+}
+
+export interface MonthRecords {
+  month: string;
+  timezone: string;
+  today: string;
+  days: DayRecord[];
 }

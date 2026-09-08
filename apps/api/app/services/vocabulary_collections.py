@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -85,6 +85,8 @@ def create_collection(
     db: Session, *, user_id: int, name: str, description: str = ""
 ) -> dict:
     cleaned = name.strip()
+    if not cleaned:
+        raise VocabularyCollectionError("名称不能为空")
     if cleaned == "默认生词本":
         raise VocabularyCollectionError("“默认生词本”是保留名称")
     existing = db.scalar(
@@ -137,6 +139,8 @@ def rename_collection(
     if collection.is_default:
         raise VocabularyCollectionError("默认生词本不能重命名")
     cleaned = name.strip()
+    if not cleaned:
+        raise VocabularyCollectionError("名称不能为空")
     conflict = db.scalar(
         select(VocabularyCollection).where(
             VocabularyCollection.user_id == user_id,
@@ -232,6 +236,8 @@ def delete_collection(db: Session, *, user_id: int, collection_id: int) -> dict:
     if collection.is_default:
         raise VocabularyCollectionError("默认生词本不能删除")
     name = collection.name
+    db.execute(update(User).where(User.id == user_id, User.selected_collection_id == collection_id).values(selected_collection_id=None))
+    db.execute(delete(VocabularyCollectionItem).where(VocabularyCollectionItem.collection_id == collection_id))
     db.delete(collection)
     db.commit()
     return {"id": collection_id, "name": name, "deleted": True}

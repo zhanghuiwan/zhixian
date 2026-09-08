@@ -130,7 +130,7 @@ def test_committed_bundle_round_trip_and_hash_validation(tmp_path):
         load_wordlist_bundle(manifest, bundle_path)
 
 
-def test_import_is_idempotent_and_publishes_one_wordbook():
+def test_import_is_idempotent_and_preserves_existing_wordbooks():
     _, build = make_build()
 
     with SessionLocal() as db:
@@ -156,7 +156,7 @@ def test_import_is_idempotent_and_publishes_one_wordbook():
         published = db.scalars(
             select(Wordbook).where(Wordbook.is_published.is_(True))
         ).all()
-        assert [item.slug for item in published] == ["test-core-en-v1"]
+        assert [item.slug for item in published] == [None, "test-core-en-v1"]
         assert db.scalar(select(func.count()).select_from(WordbookWord)) == 4
         assert (
             db.scalar(
@@ -168,3 +168,19 @@ def test_import_is_idempotent_and_publishes_one_wordbook():
         )
         assert db.scalar(select(func.count()).select_from(WordlistSource)) == 2
         assert db.scalar(select(func.count()).select_from(WordlistSourceEntry)) == 3
+
+
+def test_source_books_are_published_without_exposing_merged_book():
+    _, build = make_build()
+    build.manifest["publish_source_books"] = True
+    build.manifest["publish_merged_book"] = False
+
+    with SessionLocal() as db:
+        result = import_wordlist(db, build)
+        published = db.scalars(
+            select(Wordbook).where(Wordbook.is_published.is_(True)).order_by(Wordbook.id)
+        ).all()
+
+        assert [item.slug for item in published] == [None, "zhixian-source-a-v1", "zhixian-source-b-v1"]
+        assert result["merged_wordbook_published"] is False
+        assert [item["word_count"] for item in result["presets"]] == [1, 2]

@@ -60,6 +60,6 @@ def select_wordbook(
     if wordbook is None or not wordbook.is_published:
         raise HTTPException(status_code=404, detail="词书不存在")
     current_user.selected_wordbook_id = wordbook.id
+    current_user.selected_collection_id = None
     db.commit()
     return serialize_wordbook(wordbook, current_user, db)
-

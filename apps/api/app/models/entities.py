@@ -37,6 +37,8 @@ class User(Base):
     daily_new_words: Mapped[int] = mapped_column(Integer, default=10)
     timezone: Mapped[str] = mapped_column(String(64), default="Asia/Shanghai")
     selected_wordbook_id: Mapped[int | None] = mapped_column(ForeignKey("wordbooks.id"))
+    selected_collection_id: Mapped[int | None] = mapped_column(Integer)
+    example_content_version: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
@@ -253,7 +255,10 @@ class UserWordProgress(Base):
 
 class StudyReview(Base):
     __tablename__ = "study_reviews"
-    __table_args__ = (Index("ix_reviews_user_time", "user_id", "reviewed_at"),)
+    __table_args__ = (
+        Index("ix_reviews_user_time", "user_id", "reviewed_at"),
+        UniqueConstraint("user_id", "request_id", name="uq_review_request"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -262,6 +267,12 @@ class StudyReview(Base):
     previous_interval: Mapped[int] = mapped_column(Integer, default=0)
     next_interval: Mapped[int] = mapped_column(Integer, default=0)
     reviewed_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    source_kind: Mapped[str] = mapped_column(String(20), default="legacy")
+    source_id: Mapped[int | None] = mapped_column(Integer)
+    source_name: Mapped[str] = mapped_column(String(120), default="来源未记录")
+    mode: Mapped[str] = mapped_column(String(20), default="legacy")
+    request_id: Mapped[str | None] = mapped_column(String(64))
+    result_snapshot: Mapped[dict | None] = mapped_column(JSON)
 
     word: Mapped[Word] = relationship()
 
@@ -363,6 +374,7 @@ class Article(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(250))
+    slug: Mapped[str | None] = mapped_column(String(120), unique=True)
     title_zh: Mapped[str] = mapped_column(String(250))
     summary: Mapped[str] = mapped_column(String(500))
     level: Mapped[str] = mapped_column(String(20))
@@ -397,13 +409,54 @@ class ArticleSentence(Base):
 
 class SentenceBookmark(Base):
     __tablename__ = "sentence_bookmarks"
-    __table_args__ = (UniqueConstraint("user_id", "sentence_id"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "sentence_id"),
+        UniqueConstraint("user_id", "dedup_key", name="uq_bookmark_user_key"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    sentence_id: Mapped[int] = mapped_column(
-        ForeignKey("article_sentences.id", ondelete="CASCADE"), index=True
+    sentence_id: Mapped[int | None] = mapped_column(
+        ForeignKey("article_sentences.id", ondelete="SET NULL"), index=True
     )
+    article_id: Mapped[int | None] = mapped_column(
+        ForeignKey("articles.id", ondelete="SET NULL")
+    )
+    text: Mapped[str] = mapped_column(Text, default="")
+    translation: Mapped[str] = mapped_column(Text, default="")
+    source_type: Mapped[str] = mapped_column(String(20), default="article")
+    source_title: Mapped[str] = mapped_column(String(250), default="")
+    source_ref: Mapped[str | None] = mapped_column(String(120))
+    note: Mapped[str] = mapped_column(Text, default="")
+    tags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    is_example: Mapped[bool] = mapped_column(Boolean, default=False)
+    dedup_key: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    sentence: Mapped[ArticleSentence] = relationship()
+    sentence: Mapped[ArticleSentence | None] = relationship()
+
+
+class ReadingProgress(Base):
+    __tablename__ = "reading_progress"
+    __table_args__ = (UniqueConstraint("user_id", "article_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("articles.id", ondelete="CASCADE"))
+    position: Mapped[int] = mapped_column(Integer, default=1)
+    percent: Mapped[int] = mapped_column(Integer, default=0)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class ReadingActivity(Base):
+    __tablename__ = "reading_activity"
+    __table_args__ = (UniqueConstraint("user_id", "article_id", "day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    article_id: Mapped[int] = mapped_column(ForeignKey("articles.id", ondelete="CASCADE"))
+    day: Mapped[date] = mapped_column(Date, index=True)
+    percent: Mapped[int] = mapped_column(Integer, default=0)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)

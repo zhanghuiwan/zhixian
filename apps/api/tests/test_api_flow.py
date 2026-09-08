@@ -46,3 +46,140 @@ def test_user_data_is_isolated(client, auth_headers):
 def test_login_rejects_bad_password(client, auth_headers):
     response = client.post("/api/v1/auth/login", json={"email": "learner@example.com", "password": "wrong-password"})
     assert response.status_code == 401
+
+
+def test_personal_books_reviews_records_and_reading_progress(client, auth_headers):
+    created = client.post(
+        "/api/v1/library/personal",
+        headers=auth_headers,
+        json={"name": "旅行表达", "description": "出行时使用"},
+    )
+    assert created.status_code == 201
+    book_id = created.json()["id"]
+    added = client.post(
+        f"/api/v1/library/personal/{book_id}/words",
+        headers=auth_headers,
+        json={"terms": ["wander", "tranquil", "missing-term"]},
+    )
+    assert added.json() == {"added": 2, "existing": 0, "missing": ["missing-term"]}
+    assert client.post(
+        f"/api/v1/library/personal/{book_id}/select", headers=auth_headers
+    ).status_code == 200
+    detail = client.get(
+        f"/api/v1/library/personal/{book_id}", headers=auth_headers
+    ).json()
+    assert detail["book"]["is_selected"] is True
+    assert detail["total"] == 2
+
+    queue = client.get(
+        f"/api/v1/study/queue?kind=personal&source_id={book_id}&mode=new",
+        headers=auth_headers,
+    ).json()
+    item = queue["items"][0]
+    payload = {
+        "word_id": item["word"]["id"],
+        "rating": "good",
+        "source_kind": "personal",
+        "source_id": book_id,
+        "request_id": "same-request-1234",
+    }
+    first = client.post("/api/v1/study/reviews", headers=auth_headers, json=payload)
+    second = client.post("/api/v1/study/reviews", headers=auth_headers, json=payload)
+    assert first.status_code == 200
+    assert second.json() == first.json()
+
+    article_id = client.get("/api/v1/articles", headers=auth_headers).json()[0]["id"]
+    article = client.get(f"/api/v1/articles/{article_id}", headers=auth_headers).json()
+    sentence = article["sentences"][0]
+    custom = client.post(
+        "/api/v1/sentences",
+        headers=auth_headers,
+        json={
+            "text": sentence["text"],
+            "translation": sentence["translation"],
+            "article_id": article_id,
+        },
+    )
+    assert custom.status_code == 201
+    progress = client.put(
+        f"/api/v1/articles/{article_id}/progress",
+        headers=auth_headers,
+        json={"position": 1, "percent": 55, "completed": False},
+    )
+    assert progress.json()["percent"] == 55
+    month = __import__("datetime").datetime.now().strftime("%Y-%m")
+    records = client.get(f"/api/v1/records?month={month}", headers=auth_headers)
+    assert records.status_code == 200
+    today = next(day for day in records.json()["days"] if day["date"] == records.json()["today"])
+    assert today["word_count"] == 1
+    assert today["reading_count"] == 1
+
+
+def test_sentence_collection_is_user_scoped(client, auth_headers):
+    created = client.post(
+        "/api/v1/sentences",
+        headers=auth_headers,
+        json={"text": "A sentence saved by the first learner."},
+    ).json()
+    second = client.post(
+        "/api/v1/auth/register",
+        json={"email": "sentences-second@example.com", "password": "Strong123!", "nickname": "Second"},
+    )
+    second_headers = {"Authorization": f"Bearer {second.json()['access_token']}"}
+    assert client.patch(
+        f"/api/v1/sentences/{created['id']}",
+        headers=second_headers,
+        json={"translation": "", "note": "越权", "tags": []},
+    ).status_code == 404
+    assert all(item["id"] != created["id"] for item in client.get(
+        "/api/v1/sentences", headers=second_headers
+    ).json()["items"])
+
+    updated = client.patch(
+        f"/api/v1/sentences/{created['id']}",
+        headers=auth_headers,
+        json={"note": "只更新笔记"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["note"] == "只更新笔记"
+    assert updated.json()["translation"] == ""
+
+
+def test_registration_seeds_example_sentence_collection_once(client):
+    from app.db.example_content import EXAMPLE_ARTICLES
+    from app.db.session import SessionLocal
+    from app.models import Article, ArticleSentence
+
+    with SessionLocal() as db:
+        for source in EXAMPLE_ARTICLES:
+            article_data = {key: value for key, value in source.items() if key != "sentences"}
+            article = Article(**article_data)
+            db.add(article)
+            db.flush()
+            db.add_all([
+                ArticleSentence(
+                    article_id=article.id,
+                    position=position,
+                    text=text,
+                    translation=translation,
+                )
+                for position, (text, translation) in enumerate(source["sentences"], 1)
+            ])
+        db.commit()
+
+    registered = client.post(
+        "/api/v1/auth/register",
+        json={"email": "examples@example.com", "password": "Strong123!", "nickname": "Examples"},
+    )
+    assert registered.status_code == 201
+    headers = {"Authorization": f"Bearer {registered.json()['access_token']}"}
+    examples = client.get("/api/v1/sentences?source=example", headers=headers).json()["items"]
+    assert len(examples) == 4
+    assert all(item["is_example"] for item in examples)
+
+    logged_in = client.post(
+        "/api/v1/auth/login",
+        json={"email": "examples@example.com", "password": "Strong123!"},
+    )
+    assert logged_in.status_code == 200
+    assert len(client.get("/api/v1/sentences?source=example", headers=headers).json()["items"]) == 4

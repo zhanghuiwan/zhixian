@@ -1,12 +1,12 @@
 # 测试与验证规范
 
-最后核对：2026-09-08。
+最后核对：2026-09-09。
 
 ## 1. 当前自动化基线
 
 | 层 | 当前门禁 | 位置 |
 |---|---|---|
-| 后端 | pytest，当前 22 个测试函数 | `apps/api/tests` |
+| 后端 | pytest，当前 26 个测试函数 | `apps/api/tests` |
 | 前端 | ESLint + TypeScript/Next.js production build | `apps/web` |
 | CI | Python 3.13、Node 24；push `main` 和 PR 触发 | `.github/workflows/ci.yml` |
 | 容器 | Compose 配置解析、镜像构建、健康检查 | `compose.yaml` |
@@ -82,12 +82,14 @@ docker compose exec -T api alembic current
 curl http://127.0.0.1/api/v1/health
 ```
 
-当前预期 Alembic 为 `0004 (head)`，新增迁移后预期值随之更新并同步修改部署文档。
+当前预期 Alembic 为 `0005 (head)`，新增迁移后预期值随之更新并同步修改部署文档。
 
 迁移至少验证两条路径：
 
 1. 空数据库直接 `alembic upgrade head`；
 2. 生产当前 head 的带数据副本升级到新 head。
+
+`0005` 还要确认旧句子收藏回填原文、译文、文章来源和去重键，并分别检查 SQLite 与 PostgreSQL 的 `SET NULL` 外键。
 
 降级只在明确支持时测试。不可安全降级的迁移必须在发布说明中使用数据库恢复方案，不能提供虚假的回滚保证。
 
@@ -147,12 +149,12 @@ python -m app.db.import_wordlist \
 最终说明中逐项写实际结果，例如：
 
 ```text
-- Backend: 22 passed
+- Backend: 26 passed
 - Web lint: passed
 - Web build: passed
 - Compose config: passed
-- PostgreSQL bootstrap: 0004 (head), 7,416 wordbook members, idempotent re-import
-- Manual: /assistant at 360px and 1440px passed
+- PostgreSQL bootstrap: 0005 (head), 7,416 dictionary terms, 6 published preset books
+- Manual: AI home, books, study, reading, sentences and records at 360px/desktop passed
 ```
 
 不要只写“测试完成”。失败、跳过、警告和环境限制都应保留，这些信息是下一位接手者的起点。

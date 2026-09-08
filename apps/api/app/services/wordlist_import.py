@@ -742,18 +742,9 @@ def _upsert_wordbook(
             )
             added += 1
 
-    other_books = db.scalars(
-        select(Wordbook).where(
-            Wordbook.id != wordbook.id, Wordbook.is_published.is_(True)
-        )
-    ).all()
-    for item in other_books:
-        item.is_published = False
+    # A dictionary refresh must never replace a learner's chosen book.
     reassigned_users = 0
-    for user in db.scalars(select(User).where(User.selected_wordbook_id != wordbook.id)).all():
-        user.selected_wordbook_id = wordbook.id
-        reassigned_users += 1
-    for user in db.scalars(select(User).where(User.selected_wordbook_id.is_(None))).all():
+    for user in db.scalars(select(User).where(User.selected_wordbook_id.is_(None), User.selected_collection_id.is_(None))).all():
         user.selected_wordbook_id = wordbook.id
         reassigned_users += 1
 
@@ -762,7 +753,7 @@ def _upsert_wordbook(
         "members_added": added,
         "members_removed": removed,
         "members_repositioned": repositioned,
-        "other_wordbooks_unpublished": len(other_books),
+        "other_wordbooks_unpublished": 0,
         "users_reassigned": reassigned_users,
     }
 
@@ -843,8 +834,38 @@ def import_wordlist(db: Session, build: WordlistBuild) -> dict[str, Any]:
     words, word_stats = _upsert_words(db, build)
     wordbook, wordbook_stats = _upsert_wordbook(db, build, words)
     source_stats = _upsert_sources(db, build, words)
+    presets = []
+    preset_books = []
+    if build.manifest.get("publish_source_books"):
+        for source in build.sources:
+            key = source.manifest["source_key"]
+            ordered = sorted(
+                (item for item in build.words.values() if key in item.source_positions),
+                key=lambda item: item.source_positions[key],
+            )
+            source_manifest = {
+                **build.manifest,
+                "slug": "zhixian-" + source.manifest["slug"] + "-v1",
+                "display_name": source.manifest["display_name"],
+                "description": "系统预设 · 当前导入版本；与其他词书共享单词掌握进度。",
+                "level": source.manifest["display_name"],
+            }
+            source_build = WordlistBuild(source_manifest, OrderedDict((item.term, item) for item in ordered), [], {})
+            preset, stats = _upsert_wordbook(db, source_build, words)
+            preset_books.append(preset)
+            presets.append({"slug": preset.slug, "word_count": len(ordered), **stats})
+    users_reassigned_from_merged = 0
+    if preset_books and build.manifest.get("publish_merged_book") is False:
+        replacement = preset_books[0]
+        for user in db.scalars(select(User).where(User.selected_wordbook_id == wordbook.id)).all():
+            user.selected_wordbook_id = replacement.id
+            users_reassigned_from_merged += 1
+        wordbook.is_published = False
     db.commit()
     return {
+        "presets": presets,
+        "merged_wordbook_published": wordbook.is_published,
+        "users_reassigned_from_merged": users_reassigned_from_merged,
         "wordbook_id": wordbook.id,
         "wordbook_slug": wordbook.slug,
         "final_unique_terms": len(build.words),

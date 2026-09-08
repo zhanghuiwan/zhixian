@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -45,6 +46,7 @@ class UserRead(ORMModel):
     daily_new_words: int
     timezone: str
     selected_wordbook_id: int | None
+    selected_collection_id: int | None = None
     created_at: datetime
 
 
@@ -82,6 +84,10 @@ class StudyQueueItem(BaseModel):
     mode: str
     repetitions: int
     mastery_score: int
+    source_kind: str = "all"
+    source_id: int | None = None
+    source_name: str = "综合复习"
+    intervals: dict[str, str] = Field(default_factory=dict)
 
 
 class StudyQueueResponse(BaseModel):
@@ -93,6 +99,9 @@ class StudyQueueResponse(BaseModel):
 class ReviewCreate(BaseModel):
     word_id: int
     rating: str = Field(pattern="^(again|hard|good|easy)$")
+    source_kind: Literal["system", "personal", "all", "legacy"] = "legacy"
+    source_id: int | None = Field(default=None, ge=1)
+    request_id: str | None = Field(default=None, min_length=8, max_length=64)
 
 
 class ReviewResult(BaseModel):
@@ -147,6 +156,10 @@ class ArticleListItem(ORMModel):
     topic: str
     read_minutes: int
     cover_gradient: str
+    source_type: str = "seed"
+    is_private: bool = False
+    progress: int = 0
+    is_completed: bool = False
 
 
 class SentenceRead(ORMModel):
@@ -159,16 +172,22 @@ class SentenceRead(ORMModel):
 
 class ArticleDetail(ArticleListItem):
     sentences: list[SentenceRead]
+    last_position: int = 1
 
 
 class BookmarkRead(BaseModel):
     id: int
-    sentence_id: int
-    article_id: int
+    sentence_id: int | None
+    article_id: int | None
     article_title: str
     text: str
     translation: str
     created_at: datetime
+    source_type: str = "article"
+    source_ref: str | None = None
+    note: str = ""
+    tags: list[str] = Field(default_factory=list)
+    is_example: bool = False
 
 
 class RecentActivity(BaseModel):

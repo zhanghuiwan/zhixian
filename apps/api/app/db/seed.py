@@ -86,6 +86,9 @@ ARTICLES = [
 ]
 
 
+from app.db.example_content import EXAMPLE_ARTICLES, ensure_example_bookmarks
+
+
 def seed_database() -> None:
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
@@ -120,15 +123,23 @@ def seed_database() -> None:
             for index, word in enumerate(words, 1):
                 db.add(WordbookWord(wordbook_id=wordbook.id, word_id=word.id, position=index))
 
-        if (db.scalar(select(func.count()).select_from(Article)) or 0) == 0:
-            for source in ARTICLES:
-                item = source.copy()
-                sentences = item.pop("sentences")
-                article = Article(**item)
-                db.add(article)
-                db.flush()
-                for position, (text, translation) in enumerate(sentences, 1):
-                    db.add(ArticleSentence(article_id=article.id, position=position, text=text, translation=translation))
+        for index, source in enumerate(ARTICLES + EXAMPLE_ARTICLES, 1):
+            item = source.copy()
+            sentences = item.pop("sentences")
+            slug = item.setdefault("slug", f"zhixian-reading-example-{index}")
+            article = db.scalar(select(Article).where(Article.slug == slug))
+            if article is None:
+                article = db.scalar(select(Article).where(Article.title == item["title"], Article.source_type == "seed", Article.owner_user_id.is_(None)))
+            if article is not None:
+                if article.slug is None:
+                    article.slug = slug
+                continue
+            article = Article(**item)
+            db.add(article)
+            db.flush()
+            for position, (text, translation) in enumerate(sentences, 1):
+                db.add(ArticleSentence(article_id=article.id, position=position, text=text, translation=translation))
+            db.flush()
 
         settings = get_settings()
         demo = db.scalar(select(User).where(User.email == "demo@zhixian.app"))
@@ -147,6 +158,9 @@ def seed_database() -> None:
             first_word = db.scalar(select(Word).where(Word.term == "serendipity"))
             if first_word:
                 db.add(VocabularyItem(user_id=demo.id, word_id=first_word.id, source_type="article", source_ref="1"))
+        db.flush()
+        for user in db.scalars(select(User)).all():
+            ensure_example_bookmarks(db, user)
         db.commit()
 
 

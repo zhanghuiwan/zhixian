@@ -1,6 +1,6 @@
 # 架构设计
 
-最后核对：2026-09-07。当前完成度和已知限制见 [项目状态](PROJECT_STATUS.md)，表级细节见 [数据模型](DATA_MODEL.md)。
+最后核对：2026-09-09。当前完成度和已知限制见 [项目状态](PROJECT_STATUS.md)，表级细节见 [数据模型](DATA_MODEL.md)。
 
 ## 1. 总体方案
 
@@ -42,13 +42,14 @@ Nginx :80/:443
 ## 4. 数据模型边界
 
 - `words` 保存全局词典条目，不存放用户进度。
-- `wordbooks` 与 `wordbook_words` 描述公共词书和顺序；当前产品只发布一本统一英文核心词书。
+- `wordbooks` 与 `wordbook_words` 描述系统词书和顺序；六本来源预设共享同一全局词典，合并记录只承担可重建导入。
 - `wordlist_sources` 与 `wordlist_source_entries` 保存固定上游文件及每个词的来源位置，支持去重后溯源。
 - `user_word_progress` 保存每位用户每个单词的间隔、熟练度和下次复习时间。
-- `vocabulary_items` 保存用户的自定义生词集合与来源。
+- `vocabulary_items` 保存用户拥有某个生词的事实，`vocabulary_collections` 将这些生词组织为独立个人词书。
 - `articles`、`article_sentences` 保存公共阅读内容。
-- `sentence_bookmarks` 保存用户句子收藏。
-- `study_reviews` 保存评分历史，支持统计与后续 AI 分析。
+- `sentence_bookmarks` 保存用户句子收藏及稳定文本/来源快照。
+- `reading_progress` 和 `reading_activity` 分别保存跨设备阅读位置与自然日阅读事实。
+- `study_reviews` 保存评分历史、当次词书来源和幂等结果，支持日历与 AI 分析。
 
 ## 5. 复习算法
 
@@ -110,6 +111,7 @@ Assistant page
   → Git manifest + JSONL 数据包 + SHA-256
   → 新环境启动时校验 7,416 个唯一英文词条
   → 单事务写入 words / wordbook_words / wordlist_source_entries
+  → 隐藏合并导入载体，发布六本来源预设并迁移原合并词书选择
   → SQLite（本地）或 PostgreSQL（Docker / 生产）
 ```
 

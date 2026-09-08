@@ -1,6 +1,6 @@
 # 数据模型
 
-最后核对：2026-09-07。权威实现位于 `apps/api/app/models/entities.py`，生产迁移 head 为 `0004`。
+最后核对：2026-09-09。权威实现位于 `apps/api/app/models/entities.py`，生产迁移 head 为 `0005`。
 
 ## 1. 总体规则
 
@@ -21,6 +21,8 @@ erDiagram
     USERS ||--o{ VOCABULARY_COLLECTIONS : owns
     USERS ||--o{ DAILY_STUDY_PLANS : owns
     USERS ||--o{ SENTENCE_BOOKMARKS : owns
+    USERS ||--o{ READING_PROGRESS : tracks
+    USERS ||--o{ READING_ACTIVITY : records
     USERS ||--o{ AI_PROVIDER_CONFIGS : configures
     USERS ||--o{ AI_CONVERSATIONS : owns
     USERS ||--o{ AI_USER_MEMORIES : owns
@@ -37,6 +39,9 @@ erDiagram
     DAILY_STUDY_PLANS ||--o{ DAILY_STUDY_PLAN_ITEMS : snapshots
     WORDS ||--o{ DAILY_STUDY_PLAN_ITEMS : scheduled_as
     ARTICLES ||--o{ ARTICLE_SENTENCES : contains
+    ARTICLES ||--o{ READING_PROGRESS : resumed_by
+    ARTICLES ||--o{ READING_ACTIVITY : read_on
+    ARTICLES ||--o{ SENTENCE_BOOKMARKS : source_snapshot
     ARTICLE_SENTENCES ||--o{ SENTENCE_BOOKMARKS : bookmarked_as
     AI_CONVERSATIONS ||--o{ AI_MESSAGES : contains
     AI_CONVERSATIONS ||--o{ AI_TOOL_RUNS : audits
@@ -46,12 +51,14 @@ erDiagram
 
 ### `users`
 
-保存邮箱、bcrypt 密码哈希、昵称、CEFR 等级、每日新词量、IANA 时区、当前词书和启用状态。
+保存邮箱、bcrypt 密码哈希、昵称、CEFR 等级、每日新词量、IANA 时区、当前系统/个人词书、示例内容版本和启用状态。
 
 关键约束：
 
 - `email` 唯一且有索引；注册/登录逻辑应保持统一规范化。
 - `selected_wordbook_id` 指向公共 `wordbooks`。
+- `selected_collection_id` 指向用户个人 `vocabulary_collections`；选择系统词书时清空该字段，选择个人词书时以该字段优先。
+- `example_content_version` 记录示例收藏已初始化的版本，确保用户删除示例后不会被重建。
 - 所有用户私有表通过 `user_id` 直接或间接归属用户。
 - 密码明文永不入库。
 
@@ -63,7 +70,7 @@ erDiagram
 
 ### `wordbooks`
 
-公共词书元数据：稳定唯一 `slug`、名称、描述、等级、封面色和发布状态。当前只发布 `zhixian-core-en-v1`；旧词书可以取消发布而不删除其单词和用户进度。
+公共词书元数据：稳定唯一 `slug`、名称、描述、等级、封面色和发布状态。当前发布四级、六级、考研通用、考研英语一、考研英语二和雅思六本系统预设。`zhixian-core-en-v1` 只作为合并导入载体保留为未发布记录，不出现在产品入口。
 
 ### `wordbook_words`
 
@@ -81,7 +88,7 @@ erDiagram
 
 ### `study_reviews`
 
-不可替代的评分历史：用户、单词、评分、前后间隔和发生时间。它支持仪表盘与 Agent 的真实历史查询，不应因更新当前进度而覆盖。
+不可替代的评分历史：用户、单词、评分、前后间隔和发生时间。`source_kind/source_id/source_name` 保存当次学习来源，`mode` 区分新学与复习，`(user_id, request_id)` 防止网络重试重复计分，`result_snapshot` 用于返回首次提交的确定结果。
 
 ### `daily_study_plans` / `daily_study_plan_items`
 
@@ -124,7 +131,11 @@ erDiagram
 
 ### `sentence_bookmarks`
 
-用户句子收藏，`(user_id, sentence_id)` 唯一。读取收藏时必须按用户过滤。
+用户句子收藏同时保存原文、译文、来源标题/引用、笔记、标签和示例标识。文章句子关联可以为空；文章或原句删除后，收藏仍通过快照保留。`(user_id, dedup_key)` 防止同一来源和文本重复收藏，所有读写必须按用户过滤。
+
+### `reading_progress` / `reading_activity`
+
+`reading_progress` 以 `(user_id, article_id)` 唯一保存当前阅读位置、百分比和完成时间，用于跨设备恢复。`reading_activity` 以 `(user_id, article_id, day)` 唯一保存用户自然日内的最高进度和完成状态，为学习日历提供可审计事实；页面浏览不会伪造单词评分。
 
 ## 7. AI 域
 
@@ -175,7 +186,7 @@ erDiagram
 1. 修改 ORM 和 Pydantic/前端契约。
 2. 新增下一编号 Alembic 迁移并审阅升级/降级。
 3. 从空库运行到 head。
-4. 从 `0003` 的带数据副本升级，检查约束、默认值和数据保留。
+4. 从上一个生产 head 的带数据副本升级，检查约束、默认值和数据保留；`0005` 必须验证旧句子收藏快照回填。
 5. 运行后端测试，并在 Docker PostgreSQL 演练。
 6. 更新本文、API 和部署影响。
 7. 生产部署前备份；迁移失败时按恢复方案处理，不能边试边手工改表。

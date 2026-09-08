@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import agent, ai, articles, auth, dashboard, study, users, vocabulary, wordbooks
+from app.api.routes import library, records
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import engine
@@ -20,7 +21,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.2.0",
+    version="0.3.0",
     description="知闲英语学习平台 API",
     lifespan=lifespan,
 )
@@ -42,6 +43,8 @@ for route in [
     articles.router,
     ai.router,
     agent.router,
+    library.router,
+    records.router,
 ]:
     app.include_router(route, prefix="/api/v1")
 

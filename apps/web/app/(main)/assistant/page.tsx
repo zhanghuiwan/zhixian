@@ -37,7 +37,7 @@ const pageRoutes: Record<string, string> = {
   home: "/dashboard",
   learn: "/learn",
   articles: "/articles",
-  vocabulary: "/vocabulary",
+  vocabulary: "/wordbooks",
   profile: "/profile",
 };
 
@@ -240,10 +240,10 @@ export default function AssistantPage() {
           {!messages.length && !cards.length && (
             <div className="assistant-welcome">
               <span><Sparkles size={27} /></span>
-              <h1>今天想从哪里开始？</h1>
-              <p>我能读取你的真实学习记录、安排复习、查词、生成内容，也能替你管理生词本。</p>
+              <h1>今天想学点什么？</h1>
+              <p>告诉我你的时间、目标或正在困惑的词句。我会结合真实学习记录，帮你安排下一步。</p>
               <div>
-                {["昨天学习了哪些词？", "获取明天的复习计划", "把 wander 加入生词本", "打开学习页面"].map((item) => <button key={item} onClick={() => void send(item)}>{item}</button>)}
+                {["安排今天的学习", "回顾我最近的易错词", "用我的生词生成短文", "我想解释一个词或句子"].map((item) => <button key={item} onClick={() => void send(item)}>{item}</button>)}
               </div>
             </div>
           )}

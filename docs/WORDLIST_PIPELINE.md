@@ -95,7 +95,8 @@ url, length, language, languageCategory
 |---|---|---|
 | registry `id` | manifest source slug/key | 原样记录，不仅依赖显示名称 |
 | 合并 manifest `slug` | `Wordbook.slug` | 当前为 `zhixian-core-en-v1`，稳定唯一 |
-| 合并 manifest 展示字段 | `Wordbook` | 当前只发布一本统一核心词书 |
+| 合并 manifest 展示字段 | `Wordbook` | 保留未发布的导入载体，不进入产品词书入口 |
+| 单个来源展示字段和顺序 | `Wordbook` / `WordbookWord` | 发布六本独立系统预设，共享全局词典进度 |
 | 单个来源元数据 | `WordlistSource` | 保存仓库、提交、文件、哈希、数量和授权状态 |
 | `language` | 导入过滤 | 首批只接受明确的 `en` |
 | item `name` | `Word.term` | Unicode NFKC、trim、合并空白；英语普通词默认小写 |
@@ -107,7 +108,7 @@ url, length, language, languageCategory
 | 数组位置 | `WordbookWord.position` | 从 1 开始，保持原始顺序 |
 | 来源 + 数组位置 | `WordlistSourceEntry` | 去重后仍能查询每个词来自哪些原始词书 |
 
-迁移 `0004` 已增加 `wordbooks.slug`、`wordlist_sources` 和 `wordlist_source_entries`。应用查询以数据库为准；Git 中的 JSONL 是新环境重建基础数据的版本输入，不替代数据库的唯一约束、事务和用户进度关联。
+迁移 `0004` 已增加 `wordbooks.slug`、`wordlist_sources` 和 `wordlist_source_entries`。应用查询以数据库为准；Git 中的 JSONL 是新环境重建基础数据的版本输入，不替代数据库的唯一约束、事务和用户进度关联。当前 manifest 将合并记录标为未发布，并按六个来源分别生成系统预设词书；单词本体与用户掌握进度仍保持全局唯一。
 
 ## 6. 当前仓库结构
 

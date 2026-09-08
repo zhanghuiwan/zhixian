@@ -1,6 +1,6 @@
 # API 契约与端点
 
-最后核对：2026-09-07。权威实现位于 `apps/api/app/api/routes`，运行后以 FastAPI OpenAPI `/docs` 为字段级事实源。
+最后核对：2026-09-09。权威实现位于 `apps/api/app/api/routes`，运行后以 FastAPI OpenAPI `/docs` 为字段级事实源。
 
 ## 1. 通用约定
 
@@ -19,7 +19,7 @@
 - `GET /health`：服务健康检查。
 - `POST /auth/register`：注册并返回 Bearer Token 与用户资料。
 - `POST /auth/login`：登录并返回 Bearer Token 与用户资料。
-- `GET /articles`：仅列出 `is_published=true` 的文章摘要。
+- `GET /articles`：仅列出公开已发布文章；携带有效 Token 时附加当前用户阅读进度，并包含其私有文章。
 
 文章详情、查词、收藏、学习和 AI 能力都需要登录。新增公共端点必须单独评估数据来源、滥用、限流和隐私，不能仅为前端方便移除鉴权。
 
@@ -44,8 +44,15 @@
 
 - `GET /wordbooks`：公共词书及当前用户进度。
 - `POST /wordbooks/{wordbook_id}/select`：选择当前词书。
-- `GET /study/queue?limit=20`：先返回到期复习，再按每日上限补新词；`limit` 范围 1～50。
-- `POST /study/reviews`：提交评分并更新进度、历史和当日计划完成状态。
+- `GET /library`：统一返回已发布系统词书与当前用户个人词书。
+- `POST /library/personal`：创建个人词书。
+- `GET /library/{kind}/{id}?q=&state=`：读取系统/个人词书详情并按学习状态筛选。
+- `POST /library/{kind}/{id}/select`：选择当前系统或个人词书。
+- `PATCH|DELETE /library/personal/{id}`：更新或删除当前用户的非默认个人词书。
+- `POST /library/personal/{id}/words`：按词典 term 批量加入个人词书。
+- `DELETE /library/personal/{id}/words/{word_id}`：只移出该个人词书。
+- `GET /study/queue?limit=20&mode=all&kind=system&source_id=1`：先返回所选范围内到期复习，再按用户每日新词上限补充新词；`mode` 支持 `all|new|review`，`limit` 范围 1～50。
+- `POST /study/reviews`：提交评分并更新进度、历史和当日计划完成状态；客户端应传 8～64 字符 `request_id`，相同用户的网络重试返回首次结果，不重复计分。
 
 评分枚举：`again`、`hard`、`good`、`easy`。复习算法是确定性领域规则，客户端和模型都不能自行计算并覆盖结果。
 
@@ -58,7 +65,7 @@
 - `POST /vocabulary/collections`：新建生词本。
 - `PATCH /vocabulary/collections/{collection_id}`：重命名非默认生词本。
 
-当前普通 HTTP API 没有删除 collection 的直接端点；删除通过 Agent 工具并要求二次确认。同一单词可位于多个 collection，从某个本移除不等于删除全局 `Word` 或学习进度。
+旧 `/vocabulary/collections` 接口继续供 Agent 和兼容页面使用；新产品词书入口使用 `/library`。同一单词可位于多个 collection，从某个本移除不等于删除全局 `Word` 或学习进度。
 
 ## 6. 文章、查词与收藏
 
@@ -66,12 +73,24 @@
 - `GET /articles/{article_id}`：登录后读取文章和句子；允许已发布文章或当前用户自己的私有草稿。
 - `GET /words/lookup?term=`：登录后查询内置词典，term 长度 1～100。
 - `GET /articles/bookmarks`：当前用户收藏。
+- `GET /sentences?q=&source=`：分页搜索句子收藏；来源支持 `all|article|manual|ai|example`。
+- `POST /sentences`：保存文章选区、AI 对话片段或手动句子；按来源和规范化文本幂等。
+- `PATCH /sentences/{id}`：更新译文、笔记和标签。
+- `DELETE /sentences/{id}`：删除当前用户收藏。
 - `POST /articles/sentences/{sentence_id}/bookmark`：收藏句子，重复请求复用已有记录。
 - `DELETE /articles/sentences/{sentence_id}/bookmark`：取消收藏，未收藏时仍返回 204。
+- `PUT /articles/{article_id}/progress`：保存阅读位置、百分比和完成状态，并写入用户自然日阅读活动。
 
-对外部或生成文章的可见性规则发生变化时，必须同时更新查询条件、用户隔离测试和本文。
+收藏保存文本与来源快照，即使原文章随后删除也能保留。对外部或生成文章的可见性规则发生变化时，必须同时更新查询条件、用户隔离测试和本文。
 
-## 7. AI 模型设置
+## 7. 学习记录
+
+- `GET /records?month=YYYY-MM`：按用户 IANA 时区返回整月每天的新学词、复习词、评分次数、阅读、收藏及明细。
+- `GET /records/{YYYY-MM-DD}`：返回某一天的相同结构。
+
+示例句子收藏使用 `is_example=true`，不计入收藏统计；学习日历只聚合数据库中实际评分、阅读进度和用户新增收藏。
+
+## 8. AI 模型设置
 
 全部需要登录：
 
@@ -92,7 +111,7 @@ Provider 枚举当前为 `deepseek|minimax`。保存前服务器必须配置 `AI
 - 502：厂商返回无法解析或异常响应；
 - 503：服务端主密钥未配置或厂商不可用。
 
-## 8. AI 会话
+## 9. AI 会话
 
 - `GET /ai/conversations`：未归档会话。
 - `POST /ai/conversations`：创建会话；可选 Provider，模型固定为当前配置。
@@ -105,7 +124,7 @@ Provider 枚举当前为 `deepseek|minimax`。保存前服务器必须配置 `AI
 
 已有会话不能中途切换 Provider。创建对话和保存用户消息在流开始前完成，因此即使浏览器随后断开，该用户消息仍可能已经持久化。
 
-## 9. SSE 请求与事件
+## 10. SSE 请求与事件
 
 请求：
 
@@ -142,7 +161,7 @@ Content-Type: application/json
 
 连接中止不等于服务器事务回滚或后台取消。当前实现没有断点续传；重新打开会话应通过 messages 和 tool-runs 接口恢复持久化状态。
 
-## 10. 确认协议
+## 11. 确认协议
 
 收到 `confirmation.required` 后，客户端调用：
 
@@ -158,7 +177,7 @@ Content-Type: application/json
 
 后端按 `tool_run_id + current_user.id` 读取数据库中已校验的工具名和参数。状态不是 `pending_confirmation` 时返回 409，防止重复执行。确认成功后当前版本直接执行并保存结果摘要，不自动恢复原 Agent 循环。
 
-## 11. 兼容性和新增端点
+## 12. 兼容性和新增端点
 
 - `/api/v1` 内优先向后兼容地新增可选字段；删除、重命名、改变类型/含义属于破坏性变更。
 - 破坏性变更先设计迁移期或新 API 版本，并同步前端、测试和文档。
@@ -166,6 +185,6 @@ Content-Type: application/json
 - 每个新私有端点都要有 401、越权和他人资源测试；每个写端点还要有重复请求和失败事务测试。
 - API 错误消息是用户体验的一部分，但客户端不应依赖任意自然语言全文做程序分支；需要稳定分支时新增明确错误码字段。
 
-## 12. 调试入口
+## 13. 调试入口
 
 本地 API：`http://localhost:8000`；交互 OpenAPI：`http://localhost:8000/docs`。生产是否暴露 `/docs` 需要单独安全决策，不应在公开环境展示不必要的内部操作面。

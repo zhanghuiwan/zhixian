@@ -5,23 +5,22 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
-  title: { default: "知闲 · 在阅读中学会英语", template: "%s · 知闲" },
-  description: "以词汇、阅读和科学复习构成的轻量英语学习空间。",
+  title: { default: "知闲 · AI 英语学习工作台", template: "%s · 知闲" },
+  description: "以 AI 对话连接词书、阅读、句子收藏和学习记录。",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f4f1e8",
+  themeColor: "#f7f9f8",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" data-scroll-behavior="smooth">
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
 }
-
