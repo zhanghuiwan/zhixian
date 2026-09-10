@@ -183,3 +183,90 @@ def test_registration_seeds_example_sentence_collection_once(client):
     )
     assert logged_in.status_code == 200
     assert len(client.get("/api/v1/sentences?source=example", headers=headers).json()["items"]) == 4
+
+
+def test_custom_words_are_owned_labeled_and_available_for_study(
+    client, auth_headers
+):
+    created = client.post(
+        "/api/v1/vocabulary/custom-words",
+        headers=auth_headers,
+        json={
+            "term": "moonbow",
+            "phonetic": "/ˈmuːnboʊ/",
+            "part_of_speech": "n.",
+            "translation": "月虹",
+            "definitions": [{"part_of_speech": "n.", "meaning": "月光形成的彩虹"}],
+            "example": "A moonbow appeared above the waterfall.",
+            "example_translation": "瀑布上方出现了一道月虹。",
+        },
+    )
+    assert created.status_code == 201
+    payload = created.json()
+    assert payload["word"]["dictionary_source"] == "custom"
+    assert payload["ownership_created"] is True
+
+    lookup = client.get(
+        "/api/v1/words/lookup?term=moonbow", headers=auth_headers
+    )
+    assert lookup.status_code == 200
+    assert lookup.json()["dictionary_source"] == "custom"
+    assert [
+        word["term"]
+        for word in client.get(
+            "/api/v1/vocabulary/custom-words", headers=auth_headers
+        ).json()
+    ] == ["moonbow"]
+    custom_vocabulary = client.get(
+        "/api/v1/vocabulary?dictionary_source=custom", headers=auth_headers
+    ).json()
+    assert [item["word"]["term"] for item in custom_vocabulary] == ["moonbow"]
+
+    collection_id = payload["collection_id"]
+    client.post(
+        f"/api/v1/library/personal/{collection_id}/select",
+        headers=auth_headers,
+    )
+    queue = client.get(
+        f"/api/v1/study/queue?kind=personal&source_id={collection_id}&mode=new",
+        headers=auth_headers,
+    ).json()
+    assert queue["items"][0]["word"]["term"] == "moonbow"
+    assert queue["items"][0]["word"]["dictionary_source"] == "custom"
+
+    second = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "custom-word-second@example.com",
+            "password": "Strong123!",
+            "nickname": "Second",
+        },
+    )
+    second_headers = {"Authorization": f"Bearer {second.json()['access_token']}"}
+    assert client.get(
+        "/api/v1/words/lookup?term=moonbow", headers=second_headers
+    ).status_code == 404
+    assert client.get(
+        "/api/v1/vocabulary/custom-words", headers=second_headers
+    ).json() == []
+    assert client.post(
+        "/api/v1/vocabulary",
+        headers=second_headers,
+        json={"word_id": payload["word"]["id"]},
+    ).status_code == 404
+
+    second_add = client.post(
+        "/api/v1/vocabulary/custom-words",
+        headers=second_headers,
+        json={
+            "term": "moonbow",
+            "translation": "月虹",
+            "definitions": [{"part_of_speech": "n.", "meaning": "月光形成的彩虹"}],
+        },
+    )
+    assert second_add.status_code == 201
+    assert second_add.json()["created"] is False
+    assert second_add.json()["ownership_created"] is True
+    assert client.get(
+        "/api/v1/words/lookup?term=moonbow", headers=second_headers
+    ).status_code == 200

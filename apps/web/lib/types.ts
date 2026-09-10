@@ -19,6 +19,7 @@ export interface Word {
   definitions: { part_of_speech: string; meaning: string }[];
   example: string;
   example_translation: string;
+  dictionary_source: "system" | "custom";
 }
 
 export interface Wordbook {

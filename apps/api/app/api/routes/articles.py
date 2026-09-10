@@ -9,6 +9,7 @@ from app.models import Article, ArticleSentence, ReadingProgress, SentenceBookma
 from app.schemas import ArticleDetail, ArticleListItem, BookmarkRead, WordRead
 from app.schemas.workspace import BookmarkCreate, BookmarkPage, BookmarkUpdate, ReadingResult, ReadingUpdate
 from app.services.reading import ReadingError, article_detail, article_summary, bookmark_read, create_bookmark, owned_article, save_reading, visible_articles
+from app.services.custom_words import visible_word_clause
 
 router = APIRouter(tags=["文章与句子"])
 
@@ -106,11 +107,19 @@ def lookup_word(term: str = Query(min_length=1, max_length=100), user: User = De
             candidates.extend([stem, stem + "e"])
             if len(stem) > 2 and stem[-1] == stem[-2]:
                 candidates.append(stem[:-1])
-    matches = {word.term: word for word in db.scalars(select(Word).where(Word.term.in_(candidates))).all()}
+    matches = {
+        word.term: word
+        for word in db.scalars(
+            select(Word).where(
+                Word.term.in_(candidates),
+                visible_word_clause(user.id),
+            )
+        ).all()
+    }
     for candidate in candidates:
         if candidate in matches:
             return matches[candidate]
-    raise HTTPException(404, "内置词典暂未收录，可以询问 AI 或收藏原文")
+    raise HTTPException(404, "词库暂未收录，可以让 AI 解释并加入“我的新增单词”")
 
 
 @router.post("/articles/sentences/{sentence_id}/bookmark", response_model=BookmarkRead)

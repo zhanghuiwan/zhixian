@@ -9,7 +9,6 @@ import { useAuth } from "@/lib/auth-context";
 export default function ProfilePage() {
   const { user, refreshUser, logout } = useAuth();
   const [nickname, setNickname] = useState("");
-  const [level, setLevel] = useState("B1");
   const [daily, setDaily] = useState(10);
   const [timezone, setTimezone] = useState("Asia/Shanghai");
   const [message, setMessage] = useState("");
@@ -17,7 +16,6 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       setNickname(user.nickname);
-      setLevel(user.level);
       setDaily(user.daily_new_words);
       setTimezone(user.timezone);
     }
@@ -28,7 +26,7 @@ export default function ProfilePage() {
     setMessage("");
     await api("/users/me", {
       method: "PATCH",
-      body: JSON.stringify({ nickname, level, daily_new_words: daily, timezone }),
+      body: JSON.stringify({ nickname, daily_new_words: daily, timezone }),
     });
     await refreshUser();
     setMessage("设置已保存");
@@ -68,12 +66,6 @@ export default function ProfilePage() {
           <label>
             昵称
             <input value={nickname} onChange={(event) => setNickname(event.target.value)} required />
-          </label>
-          <label>
-            当前英语水平
-            <select value={level} onChange={(event) => setLevel(event.target.value)}>
-              {["A1", "A2", "B1", "B2", "C1", "C2"].map((item) => <option key={item}>{item}</option>)}
-            </select>
           </label>
           <label>
             每日新词数量

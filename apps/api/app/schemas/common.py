@@ -65,6 +65,34 @@ class WordRead(ORMModel):
     definitions: list[dict]
     example: str
     example_translation: str
+    dictionary_source: Literal["system", "custom"] = "system"
+
+
+class CustomWordDefinition(BaseModel):
+    part_of_speech: str = Field(default="", max_length=30)
+    meaning: str = Field(min_length=1, max_length=500)
+
+
+class CustomWordCreate(BaseModel):
+    term: str = Field(min_length=1, max_length=100)
+    phonetic: str = Field(default="", max_length=120)
+    part_of_speech: str = Field(default="", max_length=30)
+    translation: str = Field(min_length=1, max_length=500)
+    definitions: list[CustomWordDefinition] = Field(
+        default_factory=list, max_length=12
+    )
+    example: str = Field(default="", max_length=1200)
+    example_translation: str = Field(default="", max_length=1200)
+    collection_id: int | None = Field(default=None, ge=1)
+
+
+class CustomWordResult(BaseModel):
+    word: WordRead
+    collection_id: int
+    collection_name: str
+    created: bool
+    ownership_created: bool
+    added_to_collection: bool
 
 
 class WordbookRead(BaseModel):

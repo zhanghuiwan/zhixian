@@ -5,17 +5,23 @@ from datetime import date
 from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, Field, ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models import (
     AIUserMemory,
+    AIConversation,
+    AIMessage,
     Article,
     ArticleSentence,
     User,
     UserWordProgress,
     VocabularyItem,
-    Word,
+)
+from app.services.custom_words import (
+    CustomWordError,
+    create_custom_word,
+    visible_word_by_term,
 )
 from app.services.learning_insights import (
     difficult_words,
@@ -53,6 +59,11 @@ class ReviewPlanArgs(BaseModel):
 class DifficultWordsArgs(BaseModel):
     days: int = Field(default=30, ge=1, le=180)
     limit: int = Field(default=10, ge=1, le=30)
+
+
+class ConversationHistoryArgs(BaseModel):
+    query: str = Field(default="", max_length=200)
+    limit: int = Field(default=12, ge=1, le=30)
 
 
 class NavigateArgs(BaseModel):
@@ -93,6 +104,22 @@ class GeneratedExample(BaseModel):
     translation: str = Field(min_length=1, max_length=300)
 
 
+class CustomWordDefinition(BaseModel):
+    part_of_speech: str = Field(default="", max_length=30)
+    meaning: str = Field(min_length=1, max_length=500)
+
+
+class CreateCustomWordArgs(BaseModel):
+    term: str = Field(min_length=1, max_length=100)
+    phonetic: str = Field(default="", max_length=120)
+    part_of_speech: str = Field(default="", max_length=30)
+    translation: str = Field(min_length=1, max_length=500)
+    definitions: list[CustomWordDefinition] = Field(min_length=1, max_length=12)
+    example: str = Field(default="", max_length=1200)
+    example_translation: str = Field(default="", max_length=1200)
+    collection_id: int | None = Field(default=None, ge=1)
+
+
 class GeneratedExamplesArgs(BaseModel):
     term: str = Field(min_length=1, max_length=100)
     examples: list[GeneratedExample] = Field(min_length=1, max_length=5)
@@ -105,7 +132,6 @@ class GeneratedSentence(BaseModel):
 
 class GeneratedArticleArgs(BaseModel):
     topic: str = Field(min_length=1, max_length=50)
-    level: Literal["A1", "A2", "B1", "B2", "C1", "C2"]
     title: str = Field(min_length=1, max_length=250)
     title_zh: str = Field(min_length=1, max_length=250)
     summary: str = Field(min_length=1, max_length=500)
@@ -147,9 +173,15 @@ class ToolDefinition:
 def _lookup(db: Session, user: User, raw: BaseModel) -> ToolOutcome:
     args = LookupWordArgs.model_validate(raw)
     cleaned = args.term.strip().lower().strip(".,!?;:'\"()[]{}")
-    word = db.scalar(select(Word).where(func.lower(Word.term) == cleaned))
+    try:
+        word = visible_word_by_term(db, user_id=user.id, term=cleaned)
+    except CustomWordError as exc:
+        raise ToolExecutionError(str(exc)) from exc
     if word is None:
-        raise ToolExecutionError("内置词典暂未收录该词")
+        return ToolOutcome(
+            {"found": False, "term": cleaned},
+            f"词库暂未收录 {cleaned}",
+        )
     progress = db.scalar(
         select(UserWordProgress).where(
             UserWordProgress.user_id == user.id, UserWordProgress.word_id == word.id
@@ -161,6 +193,7 @@ def _lookup(db: Session, user: User, raw: BaseModel) -> ToolOutcome:
         )
     )
     data = {
+        "found": True,
         "word": {
             "id": word.id,
             "term": word.term,
@@ -170,11 +203,53 @@ def _lookup(db: Session, user: User, raw: BaseModel) -> ToolOutcome:
             "definitions": word.definitions,
             "example": word.example,
             "example_translation": word.example_translation,
+            "dictionary_source": word.dictionary_source,
         },
         "mastery_score": progress.mastery_score if progress else 0,
         "in_vocabulary": vocabulary is not None,
     }
     return ToolOutcome(data, f"已查询 {word.term}")
+
+
+def _conversation_history(
+    db: Session, user: User, raw: BaseModel
+) -> ToolOutcome:
+    args = ConversationHistoryArgs.model_validate(raw)
+    statement = (
+        select(AIMessage, AIConversation)
+        .join(AIConversation, AIConversation.id == AIMessage.conversation_id)
+        .where(
+            AIConversation.user_id == user.id,
+            AIMessage.role.in_(["user", "assistant"]),
+            AIMessage.content != "",
+        )
+        .order_by(AIMessage.created_at.desc(), AIMessage.id.desc())
+        .limit(args.limit)
+    )
+    query = args.query.strip()
+    if query:
+        pattern = f"%{query}%"
+        statement = statement.where(
+            or_(
+                AIMessage.content.ilike(pattern),
+                AIConversation.title.ilike(pattern),
+            )
+        )
+    rows = db.execute(statement).all()
+    items = [
+        {
+            "conversation_id": conversation.id,
+            "conversation_title": conversation.title,
+            "role": message.role,
+            "content": message.content[:600],
+            "created_at": message.created_at.isoformat(),
+        }
+        for message, conversation in rows
+    ]
+    return ToolOutcome(
+        {"query": query, "count": len(items), "messages": items},
+        f"找到 {len(items)} 条历史对话消息",
+    )
 
 
 def _history(db: Session, user: User, raw: BaseModel) -> ToolOutcome:
@@ -261,13 +336,50 @@ def _examples(_: Session, __: User, raw: BaseModel) -> ToolOutcome:
     return ToolOutcome(args.model_dump(), f"已为 {args.term} 生成 {len(args.examples)} 个例句")
 
 
+def _create_custom_word(db: Session, user: User, raw: BaseModel) -> ToolOutcome:
+    args = CreateCustomWordArgs.model_validate(raw)
+    data = create_custom_word(
+        db,
+        user=user,
+        term=args.term,
+        phonetic=args.phonetic,
+        part_of_speech=args.part_of_speech,
+        translation=args.translation,
+        definitions=[item.model_dump() for item in args.definitions],
+        example=args.example,
+        example_translation=args.example_translation,
+        collection_id=args.collection_id,
+    )
+    word = data.pop("word")
+    data["word"] = {
+        "id": word.id,
+        "term": word.term,
+        "phonetic": word.phonetic,
+        "part_of_speech": word.part_of_speech,
+        "translation": word.translation,
+        "definitions": word.definitions,
+        "example": word.example,
+        "example_translation": word.example_translation,
+        "dictionary_source": word.dictionary_source,
+    }
+    origin_note = (
+        "并标记为我的新增单词"
+        if word.dictionary_source == "custom"
+        else "（系统词）"
+    )
+    return ToolOutcome(
+        data,
+        f"{word.term} 已加入“{data['collection_name']}”{origin_note}",
+    )
+
+
 def _article(db: Session, user: User, raw: BaseModel) -> ToolOutcome:
     args = GeneratedArticleArgs.model_validate(raw)
     article = Article(
         title=args.title,
         title_zh=args.title_zh,
         summary=args.summary,
-        level=args.level,
+        level="通用",
         topic=args.topic,
         read_minutes=max(1, round(len(args.sentences) / 5)),
         cover_gradient="forest",
@@ -293,7 +405,6 @@ def _article(db: Session, user: User, raw: BaseModel) -> ToolOutcome:
             "article_id": article.id,
             "title": article.title,
             "title_zh": article.title_zh,
-            "level": article.level,
             "topic": article.topic,
             "sentence_count": len(args.sentences),
             "is_draft": True,
@@ -327,6 +438,12 @@ TOOL_REGISTRY: dict[str, ToolDefinition] = {
     definition.name: definition
     for definition in [
         ToolDefinition("lookup_word", "查询内置词典中的单词及当前用户掌握状态。", LookupWordArgs, _lookup),
+        ToolDefinition(
+            "search_conversation_history",
+            "按关键词检索当前用户全部历史会话；用户提到过去说过的内容时使用。",
+            ConversationHistoryArgs,
+            _conversation_history,
+        ),
         ToolDefinition(
             "get_learning_history",
             "查询某个具体本地日期真实发生的学习和复习记录。",
@@ -371,7 +488,7 @@ TOOL_REGISTRY: dict[str, ToolDefinition] = {
         ),
         ToolDefinition(
             "add_word_to_vocabulary_collection",
-            "将词典中已有单词加入指定生词本；不指定时加入默认生词本。",
+            "将当前用户可见的已有单词加入指定生词本；不指定时加入默认生词本。",
             WordCollectionArgs,
             _add_word,
         ),
@@ -389,8 +506,14 @@ TOOL_REGISTRY: dict[str, ToolDefinition] = {
             requires_confirmation=True,
         ),
         ToolDefinition(
+            "create_custom_word",
+            "仅当词库未收录且用户明确同意新增时，用可靠释义创建用户私有词条并加入生词本。",
+            CreateCustomWordArgs,
+            _create_custom_word,
+        ),
+        ToolDefinition(
             "present_generated_examples",
-            "当用户要求例句时，生成符合用户等级的英文例句和中文翻译并用此工具展示。",
+            "当用户要求例句时，生成符合当前学习语境的英文例句和中文翻译并用此工具展示。",
             GeneratedExamplesArgs,
             _examples,
         ),
@@ -433,5 +556,5 @@ def execute_tool(
     validated = validate_tool_arguments(tool_name, arguments)
     try:
         return definition.handler(db, user, validated)
-    except VocabularyCollectionError as exc:
+    except (VocabularyCollectionError, CustomWordError) as exc:
         raise ToolExecutionError(str(exc)) from exc

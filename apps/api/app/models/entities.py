@@ -160,6 +160,27 @@ class Word(Base):
     definitions: Mapped[list[dict]] = mapped_column(JSON, default=list)
     example: Mapped[str] = mapped_column(Text, default="")
     example_translation: Mapped[str] = mapped_column(Text, default="")
+    dictionary_source: Mapped[str] = mapped_column(String(20), default="system")
+
+
+class UserCustomWord(Base):
+    __tablename__ = "user_custom_words"
+    __table_args__ = (
+        UniqueConstraint("user_id", "word_id", name="uq_user_custom_word"),
+        Index("ix_user_custom_words_user_created", "user_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    word_id: Mapped[int] = mapped_column(
+        ForeignKey("words.id", ondelete="CASCADE"), index=True
+    )
+    created_by: Mapped[str] = mapped_column(String(30), default="ai_agent")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    word: Mapped[Word] = relationship()
 
 
 class Wordbook(Base):

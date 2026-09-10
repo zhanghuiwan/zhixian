@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models import User, VocabularyCollectionItem, VocabularyItem, Word
 from app.schemas.workspace import AddTermsResult, BookDetail, BookSummary, BookTerms, PersonalBookCreate
 from app.services.library import book_detail, library_books, source_words, summarize_book
+from app.services.custom_words import CustomWordError, visible_word_by_term
 from app.services.vocabulary_collections import VocabularyCollectionError, create_collection, delete_collection, remove_word, rename_collection
 
 router = APIRouter(prefix="/library", tags=["词书工作台"])
@@ -80,7 +81,10 @@ def add_terms(id_: int, payload: BookTerms, user: User = Depends(get_current_use
     added = existing = 0
     missing = []
     for term in payload.terms:
-        word = db.scalar(select(Word).where(Word.term == term))
+        try:
+            word = visible_word_by_term(db, user_id=user.id, term=term)
+        except CustomWordError:
+            word = None
         if word is None:
             missing.append(term)
             continue

@@ -1,12 +1,12 @@
 # 测试与验证规范
 
-最后核对：2026-09-09。
+最后核对：2026-09-10。
 
 ## 1. 当前自动化基线
 
 | 层 | 当前门禁 | 位置 |
 |---|---|---|
-| 后端 | pytest，当前 26 个测试函数 | `apps/api/tests` |
+| 后端 | pytest，当前 29 个测试函数 | `apps/api/tests` |
 | 前端 | ESLint + TypeScript/Next.js production build | `apps/web` |
 | CI | Python 3.13、Node 24；push `main` 和 PR 触发 | `.github/workflows/ci.yml` |
 | 容器 | Compose 配置解析、镜像构建、健康检查 | `compose.yaml` |
@@ -69,6 +69,7 @@ Windows PowerShell 使用 `..\..\.venv\Scripts\python.exe -m pytest`。不要依
 - `test_api_flow.py`：账号、学习、阅读和用户隔离主流程。
 - `test_ai_providers.py`：凭证加密、Provider 配置与协议归一化。
 - `test_agent_core.py`：学习事实、Agent 会话、工具、确认、内容生成和记忆。
+- `test_migrations.py`：从带旧数据的生产前一 head 升级到当前迁移。
 
 ## 5. 数据库与迁移验证
 
@@ -82,14 +83,14 @@ docker compose exec -T api alembic current
 curl http://127.0.0.1/api/v1/health
 ```
 
-当前预期 Alembic 为 `0005 (head)`，新增迁移后预期值随之更新并同步修改部署文档。
+当前预期 Alembic 为 `0006 (head)`，新增迁移后预期值随之更新并同步修改部署文档。
 
 迁移至少验证两条路径：
 
 1. 空数据库直接 `alembic upgrade head`；
 2. 生产当前 head 的带数据副本升级到新 head。
 
-`0005` 还要确认旧句子收藏回填原文、译文、文章来源和去重键，并分别检查 SQLite 与 PostgreSQL 的 `SET NULL` 外键。
+`0005` 还要确认旧句子收藏回填原文、译文、文章来源和去重键，并分别检查 SQLite 与 PostgreSQL 的 `SET NULL` 外键。`0006` 要确认旧词标记为系统词、自定义词用户隔离、猜测其他用户词 ID 无法绕过权限，以及个人词能进入学习队列。
 
 降级只在明确支持时测试。不可安全降级的迁移必须在发布说明中使用数据库恢复方案，不能提供虚假的回滚保证。
 
@@ -153,7 +154,7 @@ python -m app.db.import_wordlist \
 - Web lint: passed
 - Web build: passed
 - Compose config: passed
-- PostgreSQL bootstrap: 0005 (head), 7,416 dictionary terms, 6 published preset books
+- PostgreSQL bootstrap: 0006 (head), 7,416 dictionary terms, 6 published preset books
 - Manual: AI home, books, study, reading, sentences and records at 360px/desktop passed
 ```
 

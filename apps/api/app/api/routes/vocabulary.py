@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload
@@ -11,6 +13,15 @@ from app.schemas import (
     VocabularyCollectionUpdate,
     VocabularyCreate,
     VocabularyRead,
+    CustomWordCreate,
+    CustomWordResult,
+    WordRead,
+)
+from app.services.custom_words import (
+    CustomWordError,
+    create_custom_word,
+    list_custom_words,
+    visible_word_by_id,
 )
 from app.services.vocabulary_collections import (
     VocabularyCollectionError,
@@ -84,6 +95,7 @@ def serialize_item(item: VocabularyItem, mastery_score: int = 0) -> VocabularyRe
 @router.get("", response_model=list[VocabularyRead])
 def list_vocabulary(
     q: str = Query(default="", max_length=100),
+    dictionary_source: Literal["all", "system", "custom"] = Query(default="all"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -102,7 +114,45 @@ def list_vocabulary(
     if q.strip():
         pattern = f"%{q.strip()}%"
         statement = statement.where(or_(Word.term.ilike(pattern), Word.translation.ilike(pattern)))
+    if dictionary_source != "all":
+        statement = statement.where(Word.dictionary_source == dictionary_source)
     return [serialize_item(item, mastery or 0) for item, mastery in db.execute(statement).all()]
+
+
+@router.get("/custom-words", response_model=list[WordRead])
+def custom_word_list(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return list_custom_words(db, user_id=current_user.id)
+
+
+@router.post(
+    "/custom-words",
+    response_model=CustomWordResult,
+    status_code=status.HTTP_201_CREATED,
+)
+def custom_word_create(
+    payload: CustomWordCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return create_custom_word(
+            db,
+            user=current_user,
+            term=payload.term,
+            translation=payload.translation,
+            phonetic=payload.phonetic,
+            part_of_speech=payload.part_of_speech,
+            definitions=[item.model_dump() for item in payload.definitions],
+            example=payload.example,
+            example_translation=payload.example_translation,
+            collection_id=payload.collection_id,
+            created_by="manual",
+        )
+    except CustomWordError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("", response_model=VocabularyRead, status_code=status.HTTP_201_CREATED)
@@ -111,7 +161,9 @@ def add_vocabulary(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    word = db.get(Word, payload.word_id)
+    word = visible_word_by_id(
+        db, user_id=current_user.id, word_id=payload.word_id
+    )
     if word is None:
         raise HTTPException(status_code=404, detail="单词不存在")
     existing = db.scalar(

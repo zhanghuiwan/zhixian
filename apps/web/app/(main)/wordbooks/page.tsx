@@ -31,7 +31,7 @@ export default function WordbooksPage() {
   const current = books.filter((book) => book.kind === tab);
   return (
     <div className="page workspace-page">
-      <header className="workspace-heading"><div><h1>词书</h1><p>系统词书共享同一份词典和掌握进度。个人词书可以收集阅读和对话中遇到的单词。</p></div><button className="primary-button" onClick={() => { setTab("personal"); setCreating(true); }}><Plus size={17} /> 新建词书</button></header>
+      <header className="workspace-heading"><div><h1>词书</h1><p>系统词书共享同一份词典和掌握进度。个人词书可以收集阅读和对话中遇到的单词。</p></div><div className="button-row"><Link className="secondary-button" href="/vocabulary?origin=custom">我的新增单词</Link><button className="primary-button" onClick={() => { setTab("personal"); setCreating(true); }}><Plus size={17} /> 新建词书</button></div></header>
       <div className="workspace-tabs" role="tablist" aria-label="词书类型">
         <button role="tab" aria-selected={tab === "system"} onClick={() => setTab("system")}>系统词书 <span>{books.filter((b) => b.kind === "system").length}</span></button>
         <button role="tab" aria-selected={tab === "personal"} onClick={() => setTab("personal")}>我的词书 <span>{books.filter((b) => b.kind === "personal").length}</span></button>

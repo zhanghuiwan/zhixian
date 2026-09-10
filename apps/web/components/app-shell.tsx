@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="sidebar-foot">
-          <Link className="mini-profile" href="/profile" title="打开个人设置"><span>{user.nickname.slice(0, 1)}</span><div><strong>{user.nickname}</strong><small>{user.level} · 每日 {user.daily_new_words} 词</small></div></Link>
+          <Link className="mini-profile" href="/profile" title="打开个人设置"><span>{user.nickname.slice(0, 1)}</span><div><strong>{user.nickname}</strong><small>每日 {user.daily_new_words} 个新词</small></div></Link>
           <button className="icon-button" onClick={logout} title="退出登录" aria-label="退出登录"><LogOut size={18} /></button>
         </div>
       </aside>

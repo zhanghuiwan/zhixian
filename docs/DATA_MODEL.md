@@ -1,6 +1,6 @@
 # 数据模型
 
-最后核对：2026-09-09。权威实现位于 `apps/api/app/models/entities.py`，生产迁移 head 为 `0005`。
+最后核对：2026-09-10。权威实现位于 `apps/api/app/models/entities.py`，生产迁移 head 为 `0006`。
 
 ## 1. 总体规则
 
@@ -18,6 +18,7 @@ erDiagram
     USERS ||--o{ USER_WORD_PROGRESS : learns
     USERS ||--o{ STUDY_REVIEWS : submits
     USERS ||--o{ VOCABULARY_ITEMS : owns
+    USERS ||--o{ USER_CUSTOM_WORDS : owns
     USERS ||--o{ VOCABULARY_COLLECTIONS : owns
     USERS ||--o{ DAILY_STUDY_PLANS : owns
     USERS ||--o{ SENTENCE_BOOKMARKS : owns
@@ -34,6 +35,7 @@ erDiagram
     WORDS ||--o{ USER_WORD_PROGRESS : tracks
     WORDS ||--o{ STUDY_REVIEWS : reviewed_as
     WORDS ||--o{ VOCABULARY_ITEMS : referenced_by
+    WORDS ||--o{ USER_CUSTOM_WORDS : visible_through
     VOCABULARY_ITEMS ||--o{ VOCABULARY_COLLECTION_ITEMS : categorized_by
     VOCABULARY_COLLECTIONS ||--o{ VOCABULARY_COLLECTION_ITEMS : contains
     DAILY_STUDY_PLANS ||--o{ DAILY_STUDY_PLAN_ITEMS : snapshots
@@ -51,7 +53,7 @@ erDiagram
 
 ### `users`
 
-保存邮箱、bcrypt 密码哈希、昵称、CEFR 等级、每日新词量、IANA 时区、当前系统/个人词书、示例内容版本和启用状态。
+保存邮箱、bcrypt 密码哈希、昵称、每日新词量、IANA 时区、当前系统/个人词书、示例内容版本和启用状态。历史 `level` 列继续保留以兼容旧数据和旧客户端，但当前产品界面及 Agent 不再读取它。
 
 关键约束：
 
@@ -66,7 +68,11 @@ erDiagram
 
 ### `words`
 
-全局词典条目。`term` 唯一并建索引；包含音标、词性、主翻译、结构化释义、示例及示例翻译。这里不保存用户掌握状态。
+全局去重词典条目。`term` 唯一并建索引；包含音标、词性、主翻译、结构化释义、示例、示例翻译和 `dictionary_source=system|custom`。这里不保存用户掌握状态。自定义词虽然复用全局词条去重，但没有对应用户所有权时不可见。
+
+### `user_custom_words`
+
+用户与自定义词的所有权映射，`(user_id, word_id)` 唯一，并记录创建来源和时间。查词、按 ID 加入生词、个人词书批量加词和学习评分必须验证“`dictionary_source=system` 或存在当前用户映射”。若后续正式词库导入同名词，导入流程把词条提升为 `system`，此后对所有用户可见。
 
 ### `wordbooks`
 
@@ -165,7 +171,8 @@ erDiagram
 
 | 数据 | 范围 | 查询要求 |
 |---|---|---|
-| `words`、已发布 `wordbooks` | 公共 | 可匿名/登录读取取决于路由策略 |
+| `dictionary_source=system` 的 `words`、已发布 `wordbooks` | 公共 | 可匿名/登录读取取决于路由策略 |
+| 自定义 `words` | 所有者用户 | 必须经 `user_custom_words.user_id=current_user.id` |
 | 公共 `articles` | 公共 | `owner_user_id IS NULL` 且发布规则满足 |
 | 个人文章草稿 | 单用户 | `owner_user_id=current_user.id` |
 | 进度、评分、计划、生词、收藏 | 单用户 | 直接或经父资源绑定 `user_id` |
@@ -186,7 +193,7 @@ erDiagram
 1. 修改 ORM 和 Pydantic/前端契约。
 2. 新增下一编号 Alembic 迁移并审阅升级/降级。
 3. 从空库运行到 head。
-4. 从上一个生产 head 的带数据副本升级，检查约束、默认值和数据保留；`0005` 必须验证旧句子收藏快照回填。
+4. 从上一个生产 head 的带数据副本升级，检查约束、默认值和数据保留；`0005` 必须验证旧句子收藏快照回填，`0006` 必须确认旧词统一回填为 `system`。
 5. 运行后端测试，并在 Docker PostgreSQL 演练。
 6. 更新本文、API 和部署影响。
 7. 生产部署前备份；迁移失败时按恢复方案处理，不能边试边手工改表。

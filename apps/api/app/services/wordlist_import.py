@@ -668,12 +668,16 @@ def _upsert_words(db: Session, build: WordlistBuild) -> tuple[dict[str, Word], d
                 definitions=item.definitions,
                 example="",
                 example_translation="",
+                dictionary_source="system",
             )
             db.add(word)
             existing[term] = word
             created += 1
         else:
             changed = False
+            if word.dictionary_source != "system":
+                word.dictionary_source = "system"
+                changed = True
             if word.term != term:
                 word.term = term
                 changed = True

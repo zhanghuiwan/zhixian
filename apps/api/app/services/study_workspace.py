@@ -8,6 +8,7 @@ from app.models.entities import utc_now
 from app.schemas.common import ReviewCreate, ReviewResult, StudyQueueItem, StudyQueueResponse
 from app.services.learning_insights import local_today, mark_plan_item_completed, utc_day_bounds
 from app.services.library import source_words
+from app.services.custom_words import visible_word_by_id
 from app.services.spaced_repetition import calculate_schedule
 from app.services.vocabulary_collections import VocabularyCollectionError
 
@@ -94,7 +95,7 @@ def submit(db: Session, user: User, payload: ReviewCreate) -> ReviewResult:
             if old.word_id != payload.word_id or old.rating != payload.rating or old.source_kind != payload.source_kind or old.source_id != payload.source_id:
                 raise StudyError("这次评分已使用不同内容提交，请刷新学习页面")
             return ReviewResult.model_validate(old.result_snapshot)
-    word = db.get(Word, payload.word_id)
+    word = visible_word_by_id(db, user_id=user.id, word_id=payload.word_id)
     if word is None:
         raise StudyError("单词不存在")
     source_name = "综合复习" if payload.source_kind == "all" else "来源未记录"

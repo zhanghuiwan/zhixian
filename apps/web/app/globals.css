@@ -215,8 +215,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .ai-home-prompts button { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.52); font-size: 10px; cursor: pointer; }
 .ai-home-prompts button:hover { color: var(--green); border-color: var(--green); }
 
-.assistant-page { height: 100vh; display: grid; grid-template-columns: 255px minmax(0,1fr); background: #f8f6ef; overflow: hidden; }
-.assistant-history { min-width: 0; padding: 24px 14px; border-right: 1px solid var(--line); background: #eeeade; overflow-y: auto; }
+.assistant-page { position: relative; height: 100vh; display: block; background: #f8f6ef; overflow: hidden; }
+.assistant-history { position: absolute; z-index: 42; inset: 0 auto 0 0; width: 255px; min-width: 0; padding: 24px 14px; border-right: 1px solid var(--line); background: #eeeade; overflow-y: auto; transform: translateX(-102%); transition: transform .2s ease; box-shadow: 15px 0 50px rgba(30,45,37,.15); }
+.assistant-history.open { transform: translateX(0); }
 .assistant-history-head { padding: 0 6px 18px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .assistant-history-head > strong { font: 550 20px var(--serif); }
 .assistant-history-head > button { padding: 7px 9px; display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 9px; color: var(--green); background: rgba(255,255,255,.5); font-size: 10px; cursor: pointer; }
@@ -237,7 +238,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .assistant-topbar strong { font: 550 18px var(--serif); }
 .assistant-topbar small { color: var(--muted); font-size: 8px; }
 .assistant-topbar > a { color: var(--green); font-size: 10px; }
-.assistant-menu { display: none; border: 0; background: transparent; cursor: pointer; }
+.assistant-menu { display: grid; place-items: center; border: 0; background: transparent; cursor: pointer; }
 .assistant-messages { width: min(820px,100%); margin: 0 auto; padding: 30px 34px 50px; overflow-y: auto; }
 .assistant-welcome { min-height: 55vh; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
 .assistant-welcome > span { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 19px; color: var(--green); background: var(--green-pale); }
@@ -269,7 +270,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .assistant-composer textarea { min-height: 48px; resize: none; border: 0; outline: 0; color: var(--ink); background: transparent; line-height: 1.55; }
 .assistant-composer > button:disabled { opacity: .45; cursor: not-allowed; }
 .assistant-composer > small { grid-column: 1/-1; padding-top: 4px; color: #949993; font-size: 8px; text-align: center; }
-.assistant-scrim { display: none; }
+.assistant-scrim { position: absolute; z-index: 41; inset: 0; display: block; border: 0; background: rgba(30,45,37,.28); }
+
+.chip-row, .word-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.word-title-row h2 { margin: 0; }
+.word-origin { display: inline-flex; align-items: center; width: max-content; padding: 3px 7px; border-radius: 999px; color: #52625a; background: #e8eeea; font: 600 8px var(--sans); letter-spacing: .02em; white-space: nowrap; }
+.word-origin.custom, .book-word-list .word-origin.custom, .vocab-card .word-origin.custom, .dictionary-popover .word-origin.custom { color: #965039; background: #f7e6da; font-family: var(--sans); }
+.book-word-list .word-origin.system, .vocab-card .word-origin.system, .dictionary-popover .word-origin.system { color: #52625a; background: #e8eeea; font-family: var(--sans); }
+.vocabulary-tabs { margin-bottom: 16px; }
 
 @media (max-width: 1050px) {
   .sidebar { width: 196px; padding-inline: 18px; }.main-content { margin-left: 196px; }.page { padding-inline: 35px; }.desktop-nav a { padding-inline: 12px; }

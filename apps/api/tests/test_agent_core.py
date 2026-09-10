@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 
 from app.db.session import SessionLocal
-from app.models import StudyReview, User, Word
+from app.models import AIConversation, AIMessage, StudyReview, User, Word
 from app.services.ai.providers import ProviderStreamEvent
 from app.services.ai.tools import execute_tool
 from app.services.learning_insights import get_review_plan, learning_history, local_today
@@ -253,7 +253,6 @@ def test_generated_examples_article_draft_and_explicit_memory(
             tool_name="generate_article_draft",
             arguments={
                 "topic": "旅行",
-                "level": "B1",
                 "title": "A Quiet Journey",
                 "title_zh": "一段安静的旅程",
                 "summary": "A short graded story.",
@@ -301,3 +300,100 @@ def test_generated_examples_article_draft_and_explicit_memory(
         ).status_code
         == 404
     )
+
+
+def test_agent_history_search_and_custom_word_tools_are_user_scoped(
+    client, auth_headers
+):
+    second = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "history-second@example.com",
+            "password": "Strong123!",
+            "nickname": "Second",
+        },
+    )
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.email == "learner@example.com"))
+        other = db.scalar(
+            select(User).where(User.email == "history-second@example.com")
+        )
+        own_conversation = AIConversation(
+            user_id=user.id,
+            title="旅行计划",
+            provider="minimax",
+            model="MiniMax-M3",
+        )
+        other_conversation = AIConversation(
+            user_id=other.id,
+            title="秘密对话",
+            provider="minimax",
+            model="MiniMax-M3",
+        )
+        db.add_all([own_conversation, other_conversation])
+        db.flush()
+        db.add_all(
+            [
+                AIMessage(
+                    conversation_id=own_conversation.id,
+                    role="user",
+                    content="我想去冰岛看瀑布。",
+                ),
+                AIMessage(
+                    conversation_id=other_conversation.id,
+                    role="user",
+                    content="冰岛的私人行程不能泄露。",
+                ),
+            ]
+        )
+        db.commit()
+
+        history = execute_tool(
+            db,
+            user=user,
+            tool_name="search_conversation_history",
+            arguments={"query": "冰岛"},
+        )
+        assert history.data["count"] == 1
+        assert history.data["messages"][0]["conversation_title"] == "旅行计划"
+        assert "私人行程" not in str(history.data)
+
+        missing = execute_tool(
+            db,
+            user=user,
+            tool_name="lookup_word",
+            arguments={"term": "moonbow"},
+        )
+        assert missing.data == {"found": False, "term": "moonbow"}
+
+        created = execute_tool(
+            db,
+            user=user,
+            tool_name="create_custom_word",
+            arguments={
+                "term": "moonbow",
+                "phonetic": "/ˈmuːnboʊ/",
+                "part_of_speech": "n.",
+                "translation": "月虹",
+                "definitions": [
+                    {"part_of_speech": "n.", "meaning": "月光形成的彩虹"}
+                ],
+                "example": "We waited for a moonbow.",
+                "example_translation": "我们等待月虹出现。",
+            },
+        )
+        assert created.data["word"]["dictionary_source"] == "custom"
+        found = execute_tool(
+            db,
+            user=user,
+            tool_name="lookup_word",
+            arguments={"term": "moonbow"},
+        )
+        assert found.data["found"] is True
+        hidden = execute_tool(
+            db,
+            user=other,
+            tool_name="lookup_word",
+            arguments={"term": "moonbow"},
+        )
+        assert hidden.data["found"] is False

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, exists, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.models import (
     User,
+    UserCustomWord,
     VocabularyCollection,
     VocabularyCollectionItem,
     VocabularyItem,
@@ -162,9 +163,22 @@ def add_word(
     term: str,
     collection_id: int | None = None,
 ) -> dict:
-    word = db.scalar(select(Word).where(func.lower(Word.term) == term.strip().lower()))
+    word = db.scalar(
+        select(Word).where(
+            func.lower(Word.term) == term.strip().lower(),
+            or_(
+                Word.dictionary_source == "system",
+                exists(
+                    select(UserCustomWord.id).where(
+                        UserCustomWord.user_id == user.id,
+                        UserCustomWord.word_id == Word.id,
+                    )
+                ),
+            ),
+        )
+    )
     if word is None:
-        raise VocabularyCollectionError("内置词典暂未收录该词")
+        raise VocabularyCollectionError("词库暂未收录该词")
     collection = (
         _owned_collection(db, user_id=user.id, collection_id=collection_id)
         if collection_id

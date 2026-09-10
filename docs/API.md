@@ -1,6 +1,6 @@
 # API 契约与端点
 
-最后核对：2026-09-09。权威实现位于 `apps/api/app/api/routes`，运行后以 FastAPI OpenAPI `/docs` 为字段级事实源。
+最后核对：2026-09-10。权威实现位于 `apps/api/app/api/routes`，运行后以 FastAPI OpenAPI `/docs` 为字段级事实源。
 
 ## 1. 通用约定
 
@@ -32,7 +32,7 @@
 - `GET /users/me`
 - `PATCH /users/me`
 
-资料更新支持昵称、CEFR 等级、每日新词目标和有效 IANA 时区。
+资料更新的当前产品入口支持昵称、每日新词目标和有效 IANA 时区。旧客户端仍可提交 CEFR `level`，但该兼容字段已不参与当前界面和 Agent 上下文。
 
 ### 仪表盘
 
@@ -58,8 +58,10 @@
 
 ## 5. 生词与多生词本
 
-- `GET /vocabulary?q=`：搜索当前用户生词。
-- `POST /vocabulary`：按全局 `word_id` 加入生词；重复添加返回已有项。
+- `GET /vocabulary?q=&dictionary_source=`：搜索当前用户生词；来源支持 `all|system|custom`。
+- `POST /vocabulary`：按当前用户可见的 `word_id` 加入生词；系统词全局可见，自定义词必须属于当前用户，重复添加返回已有项。
+- `GET /vocabulary/custom-words`：只列出当前用户拥有、且尚未被系统词库收录的自定义词。
+- `POST /vocabulary/custom-words`：创建或取得当前用户对自定义词的所有权，并加入指定或默认生词本；同一用户重复请求复用词条和关系。
 - `DELETE /vocabulary/{word_id}`：彻底移除当前用户的生词项及其分类关联。
 - `GET /vocabulary/collections`：当前用户生词本及数量；按需创建默认本。
 - `POST /vocabulary/collections`：新建生词本。
@@ -71,7 +73,7 @@
 
 - `GET /articles`：公开文章列表，仅返回已发布内容。
 - `GET /articles/{article_id}`：登录后读取文章和句子；允许已发布文章或当前用户自己的私有草稿。
-- `GET /words/lookup?term=`：登录后查询内置词典，term 长度 1～100。
+- `GET /words/lookup?term=`：登录后查询系统词和当前用户拥有的自定义词，term 长度 1～100；不泄露其他用户的自定义词。
 - `GET /articles/bookmarks`：当前用户收藏。
 - `GET /sentences?q=&source=`：分页搜索句子收藏；来源支持 `all|article|manual|ai|example`。
 - `POST /sentences`：保存文章选区、AI 对话片段或手动句子；按来源和规范化文本幂等。
@@ -122,6 +124,8 @@ Provider 枚举当前为 `deepseek|minimax`。保存前服务器必须配置 `AI
 - `POST /ai/chat/stream`：发送消息并接收 SSE。
 - `POST /ai/tool-runs/{id}/confirm`：确认或取消待处理危险操作。
 
+对话主页默认不加载为可见侧栏，但会话仍完整持久化。Agent 提供 `search_conversation_history` 领域工具，可按关键词扫描当前用户全部会话并返回每次最多 30 条受限片段；这不是向量检索，也不会把全部历史在每轮发送给模型。
+
 已有会话不能中途切换 Provider。创建对话和保存用户消息在流开始前完成，因此即使浏览器随后断开，该用户消息仍可能已经持久化。
 
 ## 10. SSE 请求与事件
@@ -160,6 +164,8 @@ Content-Type: application/json
 | `error` | 流内错误；HTTP 可能已是 200，客户端必须按事件处理 |
 
 连接中止不等于服务器事务回滚或后台取消。当前实现没有断点续传；重新打开会话应通过 messages 和 tool-runs 接口恢复持久化状态。
+
+前端恢复工具记录时只保留写操作、确认和需要长期展示的结果。查词、学习历史、复习计划、易错词、生词本列表和历史检索等只读状态只在当前请求期间显示，并在最终回答完成后清理。
 
 ## 11. 确认协议
 

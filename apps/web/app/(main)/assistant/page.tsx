@@ -41,6 +41,19 @@ const pageRoutes: Record<string, string> = {
   profile: "/profile",
 };
 
+const transientToolNames = new Set([
+  "lookup_word",
+  "get_learning_history",
+  "get_review_plan",
+  "get_difficult_words",
+  "list_vocabulary_collections",
+  "search_conversation_history",
+]);
+
+function isTransientCard(card: ToolCard) {
+  return card.toolName ? transientToolNames.has(card.toolName) : false;
+}
+
 export default function AssistantPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState<AIConversation[]>([]);
@@ -70,7 +83,9 @@ export default function AssistantPage() {
       role: item.role as "user" | "assistant",
       content: item.content,
     })));
-    setCards(toolRuns.map((item) => ({
+    setCards(toolRuns.filter((item) => (
+      item.status === "pending_confirmation" || !transientToolNames.has(item.tool_name)
+    )).map((item) => ({
       key: `tool-${item.id}`,
       event: item.status === "pending_confirmation"
         ? "confirmation.required"
@@ -116,6 +131,7 @@ export default function AssistantPage() {
           summary: String(data.summary || data.message || "正在处理"),
           data: (data.data || {}) as Record<string, unknown>,
           arguments: (data.arguments || {}) as Record<string, unknown>,
+          status: message.event === "tool.completed" ? "succeeded" : message.event === "tool.failed" ? "failed" : "running",
         };
         return [...current.filter((item) => item.toolRunId !== toolRunId), next];
       });
@@ -128,8 +144,10 @@ export default function AssistantPage() {
       if (destination) router.push(destination);
     } else if (message.event === "message.completed") {
       setMessages((current) => current.map((item) => item.key === "streaming" ? { ...item, key: `message-${String(data.message_id)}` } : item));
+      setCards((current) => current.filter((item) => !isTransientCard(item)));
     } else if (message.event === "error") {
       setError(String(data.message || "本次请求未能完成"));
+      setCards((current) => current.filter((item) => !isTransientCard(item)));
     }
   }, [router]);
 
@@ -138,6 +156,7 @@ export default function AssistantPage() {
     if (!cleaned || streaming) return;
     setError("");
     setInput("");
+    setCards((current) => current.filter((item) => !isTransientCard(item)));
     setMessages((current) => [...current, { key: `user-${Date.now()}`, role: "user", content: cleaned }]);
     setStreaming(true);
     const controller = new AbortController();
@@ -209,7 +228,7 @@ export default function AssistantPage() {
 
   return (
     <div className="assistant-page">
-      <aside className={`assistant-history ${drawerOpen ? "open" : ""}`}>
+      <aside className={`assistant-history ${drawerOpen ? "open" : ""}`} aria-hidden={!drawerOpen}>
         <div className="assistant-history-head">
           <strong>对话记录</strong>
           <button onClick={freshConversation}><MessageSquarePlus size={18} />新对话</button>
