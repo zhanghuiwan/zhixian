@@ -20,7 +20,7 @@ FastAPI 应用版本为 `0.3.0`。当前不是静态原型：前后端、数据�
 | 迁移 | Alembic `0001` → `0002` → `0003` → `0004` → `0005` → `0006`（当前 head） |
 | 入口代理 | 宿主机 Nginx：域名 → `127.0.0.1:8080`；Compose Nginx：`/` → Web，`/api/*` → API |
 | CI | GitHub Actions：后端 pytest；前端 lint + build |
-| 生产目标 | 阿里云 Ubuntu 单机 + Docker Compose；生产代码只从 GitHub `main` 拉取，域名确定为 `zhixian.zhanghuiwan.com` |
+| 生产状态 | 阿里云 Ubuntu 单机已运行 Docker Compose；生产代码只从 GitHub `main` 拉取，域名确定为 `zhixian.zhanghuiwan.com`，DNS/TLS 待完成 |
 
 ## 3. 已实现产品范围
 
@@ -100,8 +100,8 @@ FastAPI 应用版本为 `0.3.0`。当前不是静态原型：前后端、数据�
 
 ## 7. 下一步推荐顺序
 
-1. 从 GitHub `main` 在阿里云冷启动并完成容器、迁移、备份和宿主机代理验收。
-2. 添加域名 A 记录，签发 TLS 证书并验证自动续期。
+1. 添加域名 A 记录，签发 TLS 证书并验证自动续期。
+2. 把首次备份和 `AI_CREDENTIAL_ENCRYPTION_KEY` 保存到服务器之外，并做恢复演练。
 3. 在更广泛的公开分发或接受外部贡献前，决定知闲自身项目许可证并复核数据第三方义务。
 4. 根据真实使用反馈再排第三阶段 PDF/OCR/TTS；梧桐形象继续留到最后。
 

@@ -99,14 +99,17 @@ curl --fail https://zhixian.zhanghuiwan.com/api/v1/health
 
 ## 更新生产服务
 
-本地开发完成后，先把代码合并并推送到 GitHub `main`。服务器只执行：
+本地开发完成后，先把代码合并并推送到 GitHub `main`。由于当前服务器只有 2GB 内存且没有 Swap，Web 生产构建在开发机按 Linux AMD64 完成；服务器仍会自行从 GitHub 拉取并核对完全相同的 `main` 提交。开发机执行：
 
 ```bash
-cd /opt/zhixian
-sudo ZHIXIAN_BACKUP_DIR=/data/zhixian/backups bash scripts/update-production.sh
+git switch main
+git pull --ff-only origin main
+bash scripts/deploy-production.sh
 ```
 
-更新脚本会拒绝非 `main` 分支或有本地改动的工作树；先启动并等待数据库健康，创建数据库和上传文件备份，再从 `origin/main` 快进更新，依次构建 API、Web，启动服务并检查 Compose 和 Alembic 状态。
+本地脚本会拒绝非 `main` 分支、有改动的工作树或未与 `origin/main` 对齐的提交。它构建并传输 AMD64 Web 镜像；服务器随后从 GitHub 快进到同一 SHA，执行数据库和上传文件备份，构建 API，使用已核验架构的 Web 镜像，启动服务并检查 Compose 和 Alembic 状态。可用 `ZHIXIAN_DEPLOY_HOST` 覆盖默认 SSH 别名 `aliyun`。
+
+服务器脚本 `scripts/update-production.sh` 是这个流程的内部步骤。内存小于 3GB 时，如果没有传入预构建镜像标签，它会主动停止，避免服务器再次因 Web 构建失去响应。
 
 不要运行 `docker compose down -v`、`docker volume rm zhixian_postgres_data` 或更改 Compose 项目名；这些操作会删除或脱离现有数据库卷。普通的 `docker compose up -d --build`、容器重建和 `docker compose down` 会保留命名卷。
 

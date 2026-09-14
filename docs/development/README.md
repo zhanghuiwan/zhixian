@@ -302,12 +302,12 @@ GitHub 不保存数据库、PDF、图片、OCR 文件、TTS 缓存、日志和�
 
 ## 12. 阿里云部署边界
 
-服务器只部署 `main`：
+服务器只部署 GitHub `main`。当前 2GB 生产机使用开发机执行的发布脚本，以避免服务器构建 Web 时耗尽内存：
 
 ```bash
-cd /opt/zhixian
-ZHIXIAN_BACKUP_DIR=/data/zhixian/backups \
-bash scripts/update-production.sh
+git switch main
+git pull --ff-only origin main
+bash scripts/deploy-production.sh
 ```
 
 生产规则：
