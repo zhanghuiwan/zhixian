@@ -6,6 +6,7 @@
 
 - 唯一主项目和代码事实源是本仓库：`git@github.com:zhanghuiwan/zhixian.git`。
 - `apps/web` 是 Next.js 前端，`apps/api` 是 FastAPI 后端；生产目标是阿里云单机 Docker Compose。
+- 本地日常启动默认使用根目录 Docker Compose；只有明确需要热更新或单服务调试时才直接运行 Node.js/Python 进程。
 - 相邻目录 `../qwerty-learner` 仅是候选词库来源，不是知闲的第二个开发仓库。不要在那里实现知闲功能、提交改动或建立运行时依赖。
 - “梧桐形象”当前明确暂缓。除非用户重新授权，不设计、不实现，也不把它夹带进其他任务。
 - 当前阶段状态、已知限制和下一步以 `docs/PROJECT_STATUS.md` 为准。

@@ -54,7 +54,9 @@ data           词库版本数据、本地上传与备份挂载目录
 
 ## 本地启动
 
-要求：Node.js 24、Python 3.13。版本与 CI、Dockerfile 保持一致；PostgreSQL 不是本地开发的必需项。
+日常运行默认使用下方的 Docker 一键方式。只有需要前后端热更新或单服务调试时，才使用本节的源码启动方式。
+
+源码启动要求 Node.js 24、Python 3.13。版本与 CI、Dockerfile 保持一致；PostgreSQL 不是本地开发的必需项。
 
 ### 1. 后端（Conda）
 
@@ -125,6 +127,7 @@ npm run dev
 ```bash
 cp .env.example .env
 # 修改 .env 中的密码、SECRET_KEY；使用 AI 设置时还要配置加密主密钥
+# 如果本地访问 PyPI 很慢，可在 .env 中把 PIP_INDEX_URL 改为可信的 HTTPS 镜像
 docker compose up -d --build
 ```
 

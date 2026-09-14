@@ -116,6 +116,8 @@ python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_b
 
 ## 5. 本地源码开发
 
+日常启动按项目约定优先使用下一节的 Docker Compose。只有需要热更新、调试器或单服务排障时，才使用本节的源码进程。
+
 后端首次安装和启动：
 
 ```powershell
@@ -149,6 +151,7 @@ npm run dev
 ```powershell
 cd D:\project\zhixian
 Copy-Item .env.example .env
+# 如果本机访问 PyPI 很慢，可在 .env 中把 PIP_INDEX_URL 改为可信的 HTTPS 镜像
 docker compose up -d --build
 docker compose ps
 Invoke-RestMethod http://localhost/api/v1/health
@@ -293,7 +296,7 @@ GitHub 不保存数据库、PDF、图片、OCR 文件、TTS 缓存、日志和�
 /data/zhixian/backups
 ```
 
-已知注意项：当前 `compose.yaml` 使用项目相对上传目录，而备份脚本默认使用 `/data/zhixian/uploads`。按 `docs/DEPLOYMENT.md` 显式传入 `/opt/zhixian/data/uploads`；正式启用上传前必须在代码中统一路径，否则上传文件可能未被备份。
+备份脚本默认从项目根目录的 `data/uploads` 归档上传文件，与 Compose 的相对挂载保持一致；数据库备份目录默认是 `/data/zhixian/backups`。
 
 没有对象存储时，必须限制文件类型、大小、用户配额和临时文件保留时间，并至少每周把一份备份下载到另一台电脑。
 
@@ -303,13 +306,8 @@ GitHub 不保存数据库、PDF、图片、OCR 文件、TTS 缓存、日志和�
 
 ```bash
 cd /opt/zhixian
-POSTGRES_USER=zhixian POSTGRES_DB=zhixian \
-ZHIXIAN_UPLOAD_DIR=/opt/zhixian/data/uploads \
-bash scripts/backup.sh
-git pull --ff-only origin main
-docker compose up -d --build
-docker compose ps
-curl http://127.0.0.1/api/v1/health
+ZHIXIAN_BACKUP_DIR=/data/zhixian/backups \
+bash scripts/update-production.sh
 ```
 
 生产规则：

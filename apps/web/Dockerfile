@@ -7,6 +7,7 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN mkdir -p public
 ARG NEXT_PUBLIC_API_URL=/api/v1
 ARG NEXT_PUBLIC_DEMO_MODE=false
 ENV NEXT_TELEMETRY_DISABLED=1 \
