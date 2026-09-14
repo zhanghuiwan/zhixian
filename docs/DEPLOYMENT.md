@@ -27,6 +27,8 @@ sudo chmod 600 .env
 生产 `.env` 至少需要修改：
 
 ```dotenv
+PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+NPM_CONFIG_REGISTRY=https://registry.npmmirror.com/
 POSTGRES_PASSWORD=<URL-safe 强密码>
 SECRET_KEY=<随机密钥>
 AI_CREDENTIAL_ENCRYPTION_KEY=<Fernet 兼容密钥>

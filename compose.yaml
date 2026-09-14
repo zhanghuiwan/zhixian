@@ -55,6 +55,7 @@ services:
     build:
       context: ./apps/web
       args:
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org/}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
         NEXT_PUBLIC_DEMO_MODE: ${NEXT_PUBLIC_DEMO_MODE:-false}
     restart: unless-stopped

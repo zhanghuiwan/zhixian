@@ -127,7 +127,7 @@ npm run dev
 ```bash
 cp .env.example .env
 # 修改 .env 中的密码、SECRET_KEY；使用 AI 设置时还要配置加密主密钥
-# 如果本地访问 PyPI 很慢，可在 .env 中把 PIP_INDEX_URL 改为可信的 HTTPS 镜像
+# 如果软件源较慢，可在 .env 中配置可信的 PIP_INDEX_URL 和 NPM_CONFIG_REGISTRY 镜像
 docker compose up -d --build
 ```
 

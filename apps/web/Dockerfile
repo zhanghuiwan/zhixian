@@ -1,5 +1,7 @@
 FROM node:24-alpine AS deps
 WORKDIR /app
+ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org/
+ENV NPM_CONFIG_REGISTRY=$NPM_CONFIG_REGISTRY
 COPY package.json package-lock.json ./
 RUN npm ci
 

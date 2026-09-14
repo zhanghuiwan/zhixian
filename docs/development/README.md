@@ -151,7 +151,7 @@ npm run dev
 ```powershell
 cd D:\project\zhixian
 Copy-Item .env.example .env
-# 如果本机访问 PyPI 很慢，可在 .env 中把 PIP_INDEX_URL 改为可信的 HTTPS 镜像
+# 如果软件源较慢，可在 .env 中配置可信的 PIP_INDEX_URL 和 NPM_CONFIG_REGISTRY 镜像
 docker compose up -d --build
 docker compose ps
 Invoke-RestMethod http://localhost/api/v1/health
