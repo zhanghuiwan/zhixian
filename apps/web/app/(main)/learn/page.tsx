@@ -5,6 +5,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import { BookMarked, ChevronLeft, Sparkles, Volume2 } from "@/components/icons";
 import { InlineLoader } from "@/components/feedback";
 import { ApiError, api } from "@/lib/api";
+import { createRequestId } from "@/lib/request-id";
 import type { StudyQueueItem } from "@/lib/types";
 
 const ratings = [
@@ -39,7 +40,7 @@ export default function LearnPage({ searchParams }: { searchParams: Promise<{ ki
     if (!item || submitting) return;
     setSubmitting(true); setError("");
     try {
-      await api("/study/reviews", { method: "POST", body: JSON.stringify({ word_id: item.word.id, rating, source_kind: item.source_kind, source_id: item.source_id, request_id: crypto.randomUUID() }) });
+      await api("/study/reviews", { method: "POST", body: JSON.stringify({ word_id: item.word.id, rating, source_kind: item.source_kind, source_id: item.source_id, request_id: createRequestId() }) });
       if (index + 1 < (queue?.length || 0)) { setIndex(index + 1); setRevealed(false); setSaved(false); }
       else await load();
     } catch (cause) { setError(cause instanceof ApiError ? cause.message : "评分提交失败，请重试"); }
