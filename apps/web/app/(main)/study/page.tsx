@@ -37,6 +37,9 @@ export default function StudyPage() {
   const startHref = selected
     ? `/learn?kind=${selected.kind}&source_id=${selected.id}&mode=all`
     : "/learn";
+  const newHref = selected
+    ? `/learn?kind=${selected.kind}&source_id=${selected.id}&mode=new`
+    : "/wordbooks";
 
   return (
     <div className="page workspace-page study-hub">
@@ -53,6 +56,19 @@ export default function StudyPage() {
           <span><strong>{dashboard.streak_days}</strong>连续天数</span>
         </div>
       </header>
+
+      <section className="today-study-grid" aria-label="今日单词学习">
+        <Link href={newHref} className="today-study-card new-words">
+          <span>新学</span>
+          <div><h2>学习新词</h2><p>{selected ? `${selected.name} · 还有 ${Math.max(0, selected.word_count - selected.learned_count)} 词未学习` : "先选择一本词书"}</p></div>
+          <strong>开始</strong>
+        </Link>
+        <Link href="/learn?mode=review" className={`today-study-card review-words ${dashboard.due_today === 0 ? "quiet" : ""}`}>
+          <span>复习</span>
+          <div><h2>到期复习</h2><p>{dashboard.due_today > 0 ? `今天有 ${dashboard.due_today} 个单词需要复习` : "当前没有到期单词"}</p></div>
+          <strong>{dashboard.due_today > 0 ? "开始" : "查看"}</strong>
+        </Link>
+      </section>
 
       <section className="study-entrances" aria-label="学习内容">
         {entrances.map(({ href, title, description, icon: Icon }) => (

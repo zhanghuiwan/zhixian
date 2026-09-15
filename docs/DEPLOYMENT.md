@@ -1,6 +1,6 @@
 # 阿里云单机部署
 
-最后核对：2026-09-14。当前生产方案使用 GitHub `main` 作为唯一代码来源：宿主机 Nginx 继续承载现有站点，并把 `zhixian.zhanghuiwan.com` 反向代理到只监听 `127.0.0.1:8080` 的 Docker Compose 服务。PostgreSQL 数据保存在命名卷 `zhixian_postgres_data`，更新代码和重建容器不会删除该卷。
+最后核对：2026-09-16。当前生产方案使用 GitHub `main` 作为唯一代码来源：宿主机 Nginx 继续承载现有站点，并把 `zhixian.zhanghuiwan.com` 反向代理到只监听 `127.0.0.1:8080` 的 Docker Compose 服务。PostgreSQL 数据保存在命名卷 `zhixian_postgres_data`，更新代码和重建容器不会删除该卷。
 
 ## 架构与目录
 
@@ -64,7 +64,7 @@ sudo docker compose exec -T api alembic current
 
 API 容器启动时自动执行 Alembic 迁移、seed 和词书幂等导入。空数据库会创建系统预设词书、默认文章；用户注册后会得到示例句子收藏。
 
-当前应用迁移 head 为 `0007`。该迁移给旧 AI 会话补充 `manual` 类型，并新增按用户本地日期唯一的默认会话。发布前必须先备份数据库；此迁移不提供有损降级，回退代码时应恢复升级前备份。
+当前应用迁移 head 为 `0008`。该迁移新增组学习会话，并在旧评分记录上补充可空轨迹和默认尝试次数；已有评分与用户进度不会被重算。发布前必须先备份数据库；此迁移不提供有损降级，回退代码时应恢复升级前备份。
 
 安装宿主机 Nginx 配置：
 
@@ -156,6 +156,6 @@ sudo docker compose exec -T api alembic current
 sudo docker volume inspect zhixian_postgres_data
 ```
 
-`alembic current` 当前应输出 `0007 (head)`；若不是，不继续开放流量，先检查 API 启动日志和数据库备份。
+`alembic current` 当前应输出 `0008 (head)`；若不是，不继续开放流量，先检查 API 启动日志和数据库备份。
 
 发布后还应验证注册、登录、主页 AI 对话、词书、学习队列、文章划词、句子收藏和学习记录。服务器资源有限时保持 `WEB_CONCURRENCY=1`；生产服务器不运行本地大模型。

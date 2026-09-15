@@ -1,11 +1,28 @@
-from datetime import timedelta
+import hashlib
+import json
+from datetime import UTC, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import StudyReview, User, UserWordProgress, VocabularyItem, Word, WordbookWord
+from app.models import (
+    StudyReview,
+    StudySession,
+    User,
+    UserWordProgress,
+    VocabularyItem,
+    Word,
+    WordbookWord,
+)
 from app.models.entities import utc_now
-from app.schemas.common import ReviewCreate, ReviewResult, StudyQueueItem, StudyQueueResponse
+from app.schemas.common import (
+    ReviewCreate,
+    ReviewResult,
+    StudyQueueItem,
+    StudyQueueResponse,
+    StudySessionComplete,
+    StudySessionResult,
+)
 from app.services.learning_insights import local_today, mark_plan_item_completed, utc_day_bounds
 from app.services.library import source_words
 from app.services.custom_words import visible_word_by_id
@@ -123,3 +140,175 @@ def submit(db: Session, user: User, payload: ReviewCreate) -> ReviewResult:
     mark_plan_item_completed(db, user=user, word_id=word.id, reviewed_at=now)
     db.commit()
     return result
+
+
+def _session_rating(scores: list[int]) -> tuple[str, str]:
+    """Return the stored three-level result and the compatibility scheduler input."""
+    if any(score < 20 for score in scores):
+        return "forgot", "again"
+    if len(scores) > 1 or any(score < 80 for score in scores):
+        return "fuzzy", "hard"
+    return "remembered", "good"
+
+
+def _naive_utc(value):
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
+def complete_session(
+    db: Session, user: User, payload: StudySessionComplete
+) -> StudySessionResult:
+    """Commit one completed study group and update each word exactly once."""
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            payload.model_dump(mode="json"),
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    db.scalar(select(User).where(User.id == user.id).with_for_update())
+    existing = db.scalar(
+        select(StudySession).where(
+            StudySession.user_id == user.id,
+            StudySession.client_session_id == payload.session_id,
+        )
+    )
+    if existing:
+        if existing.payload_hash != fingerprint:
+            raise StudyError("这个学习组已经用不同内容提交，请刷新学习页面")
+        return StudySessionResult.model_validate(existing.result_snapshot)
+
+    canonical_sources: dict[tuple[str, int | None], tuple[str, set[int] | None]] = {}
+
+    def source_for(kind: str, source_id: int | None) -> tuple[str, set[int] | None]:
+        key = (kind, source_id)
+        if key in canonical_sources:
+            return canonical_sources[key]
+        if kind == "all":
+            canonical_sources[key] = ("综合复习", None)
+            return canonical_sources[key]
+        source, word_ids = source_words(db, user, kind, source_id)
+        canonical_sources[key] = (source.name, set(db.scalars(word_ids).all()))
+        return canonical_sources[key]
+
+    session_source_name, _ = source_for(payload.source_kind, payload.source_id)
+    now = utc_now()
+    attempt_count = sum(len(item.attempts) for item in payload.words)
+    repeated_words = sum(len(item.attempts) > 1 for item in payload.words)
+    session = StudySession(
+        user_id=user.id,
+        client_session_id=payload.session_id,
+        mode=payload.mode,
+        source_kind=payload.source_kind,
+        source_id=payload.source_id,
+        source_name=session_source_name,
+        word_count=len(payload.words),
+        attempt_count=attempt_count,
+        repeated_words=repeated_words,
+        round_count=payload.round_count,
+        duration_ms=payload.duration_ms,
+        started_at=_naive_utc(payload.started_at),
+        completed_at=now,
+        payload_hash=fingerprint,
+        result_snapshot={},
+    )
+    db.add(session)
+    db.flush()
+
+    for item in payload.words:
+        word = visible_word_by_id(db, user_id=user.id, word_id=item.word_id)
+        if word is None:
+            raise StudyError("学习组中包含不存在的单词")
+        source_name, source_word_ids = source_for(item.source_kind, item.source_id)
+        if source_word_ids is not None and word.id not in source_word_ids:
+            raise StudyError("学习组中的单词不在所选词书中")
+
+        progress = db.scalar(
+            select(UserWordProgress).where(
+                UserWordProgress.user_id == user.id,
+                UserWordProgress.word_id == word.id,
+            )
+        )
+        is_new = progress is None or progress.last_reviewed_at is None
+        if progress is None:
+            progress = UserWordProgress(user_id=user.id, word_id=word.id)
+            db.add(progress)
+            db.flush()
+
+        scores = [attempt.score for attempt in item.attempts]
+        rating, scheduler_rating = _session_rating(scores)
+        previous_interval = progress.interval_days
+        schedule = calculate_schedule(
+            rating=scheduler_rating,
+            repetitions=progress.repetitions,
+            interval_days=progress.interval_days,
+            ease_factor=progress.ease_factor,
+            mastery_score=progress.mastery_score,
+            now=now,
+        )
+        for name in [
+            "repetitions",
+            "interval_days",
+            "ease_factor",
+            "mastery_score",
+            "status",
+            "next_review_at",
+        ]:
+            setattr(progress, name, getattr(schedule, name))
+        progress.last_reviewed_at = now
+        result = ReviewResult(
+            word_id=word.id,
+            status=progress.status,
+            repetitions=progress.repetitions,
+            interval_days=progress.interval_days,
+            mastery_score=progress.mastery_score,
+            next_review_at=progress.next_review_at,
+        )
+        forgotten_count = sum(score < 20 for score in scores)
+        fuzzy_count = sum(20 <= score < 80 for score in scores)
+        attempt_history = [attempt.model_dump(mode="json") for attempt in item.attempts]
+        db.add(
+            StudyReview(
+                user_id=user.id,
+                word_id=word.id,
+                rating=rating,
+                previous_interval=previous_interval,
+                next_interval=progress.interval_days,
+                reviewed_at=now,
+                source_kind=item.source_kind,
+                source_id=item.source_id,
+                source_name=source_name,
+                mode="new" if is_new else "review",
+                result_snapshot=result.model_dump(mode="json"),
+                session_id=session.id,
+                familiarity_score=scores[-1],
+                attempt_count=len(scores),
+                forgotten_count=forgotten_count,
+                fuzzy_count=fuzzy_count,
+                round_count=max(attempt.round_no for attempt in item.attempts),
+                score_history=scores,
+                attempt_history=attempt_history,
+                revealed_count=sum(
+                    attempt.revealed_before_answer for attempt in item.attempts
+                ),
+                response_ms_total=sum(attempt.response_ms for attempt in item.attempts),
+            )
+        )
+        mark_plan_item_completed(db, user=user, word_id=word.id, reviewed_at=now)
+
+    response = StudySessionResult(
+        session_id=payload.session_id,
+        word_count=len(payload.words),
+        attempt_count=attempt_count,
+        repeated_words=repeated_words,
+        round_count=payload.round_count,
+        duration_ms=payload.duration_ms,
+        completed_at=now,
+    )
+    session.result_snapshot = response.model_dump(mode="json")
+    db.commit()
+    return response

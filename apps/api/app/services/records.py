@@ -39,6 +39,6 @@ def period_records(db: Session, user: User, start_day: date, end_day: date) -> l
         for r in rows:
             groups[(r.source_kind, r.source_id, r.source_name)].add(r.word_id)
         new_count = sum(first[word_id] == day for word_id in words)
-        output.append(DayRecord(date=day, new_count=new_count, review_count=len(words) - new_count, attempts=len(rows), word_count=len(words), reading_count=len(readings[day]), saved_words=saved_words[day], saved_sentences=saved_sentences[day], books=[RecordBook(kind=k, id=id_, name=name, word_count=len(ids)) for (k, id_, name), ids in groups.items()], words=[RecordWord(id=r.word_id, term=r.word.term, translation=r.word.translation, rating=r.rating, mode="new" if first[r.word_id] == day else "review") for r in words.values()], articles=readings[day]))
+        output.append(DayRecord(date=day, new_count=new_count, review_count=len(words) - new_count, attempts=sum(r.attempt_count for r in rows), word_count=len(words), reading_count=len(readings[day]), saved_words=saved_words[day], saved_sentences=saved_sentences[day], books=[RecordBook(kind=k, id=id_, name=name, word_count=len(ids)) for (k, id_, name), ids in groups.items()], words=[RecordWord(id=r.word_id, term=r.word.term, translation=r.word.translation, rating=r.rating, mode="new" if first[r.word_id] == day else "review") for r in words.values()], articles=readings[day]))
         day += timedelta(days=1)
     return output

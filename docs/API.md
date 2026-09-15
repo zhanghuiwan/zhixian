@@ -1,6 +1,6 @@
 # API 契约与端点
 
-最后核对：2026-09-10。权威实现位于 `apps/api/app/api/routes`，运行后以 FastAPI OpenAPI `/docs` 为字段级事实源。
+最后核对：2026-09-16。权威实现位于 `apps/api/app/api/routes`，运行后以 FastAPI OpenAPI `/docs` 为字段级事实源。
 
 ## 1. 通用约定
 
@@ -52,9 +52,10 @@
 - `POST /library/personal/{id}/words`：按词典 term 批量加入个人词书。
 - `DELETE /library/personal/{id}/words/{word_id}`：只移出该个人词书。
 - `GET /study/queue?limit=20&mode=all&kind=system&source_id=1`：先返回所选范围内到期复习，再按用户每日新词上限补充新词；`mode` 支持 `all|new|review`，`limit` 范围 1～50。
-- `POST /study/reviews`：提交评分并更新进度、历史和当日计划完成状态；客户端应传 8～64 字符 `request_id`，相同用户的网络重试返回首次结果，不重复计分。
+- `POST /study/sessions/complete`：提交已全部通过的一组学习记录。请求包含 8～64 字符客户端 `session_id`、来源、起止/用时、轮数，以及每个词的 0–100 分数序列、答题方式、轮次、响应时间和是否查看答案。服务端按当前用户验证所有词与词书来源，并在单个事务中写入会话、逐词统计、当前进度和计划完成状态；相同内容可安全重试，不同内容复用同一会话 ID 返回 409。
+- `POST /study/reviews`：旧单次评分兼容接口；客户端应传 8～64 字符 `request_id`，相同用户的网络重试返回首次结果，不重复计分。当前 Web 学习页不再使用该接口。
 
-评分枚举：`again`、`hard`、`good`、`easy`。复习算法是确定性领域规则，客户端和模型都不能自行计算并覆盖结果。
+当前 Web 快捷熟悉度为“不记得 0、模糊 50、熟悉 90”，滑杆允许 0–100；最终分低于 80 的词不能提交整组。复习间隔不在学习页显示，服务端根据完整组内轨迹更新进度。旧接口的 `again|hard|good|easy` 枚举仅为兼容保留。
 
 ## 5. 生词与多生词本
 

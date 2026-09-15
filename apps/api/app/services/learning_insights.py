@@ -211,8 +211,10 @@ def difficult_words(db: Session, *, user: User, days: int = 30, limit: int = 10)
                 "difficult_attempts": 0,
             },
         )
-        entry["attempts"] += 1
-        if review.rating in {"again", "hard"}:
+        entry["attempts"] += review.attempt_count
+        if review.score_history:
+            entry["difficult_attempts"] += review.forgotten_count + review.fuzzy_count
+        elif review.rating in {"again", "hard"}:
             entry["difficult_attempts"] += 1
     for entry in grouped.values():
         entry["difficulty_rate"] = round(

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BookMarked, Search, Volume2, X } from "@/components/icons";
 import { EmptyState, InlineLoader } from "@/components/feedback";
 import { api } from "@/lib/api";
+import { speakEnglish } from "@/lib/pronunciation";
 import type { VocabularyItem } from "@/lib/types";
 
 const sourceLabels: Record<string, string> = { article: "来自文章", study: "来自学习", manual: "手工添加", custom_word: "AI 补充", ai_agent: "AI 添加" };
@@ -21,7 +22,7 @@ export default function VocabularyPage() {
   }, []);
 
   async function remove(wordId: number) { await api(`/vocabulary/${wordId}`, { method: "DELETE" }); await load(query); }
-  function speak(term: string) { if ("speechSynthesis" in window) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(term)); } }
+  function speak(term: string) { speakEnglish(term); }
 
   const visibleItems = items?.filter(
     (item) => dictionarySource === "all" || item.word.dictionary_source === dictionarySource

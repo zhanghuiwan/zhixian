@@ -33,6 +33,155 @@ def test_complete_learning_and_reading_flow(client, auth_headers):
     assert dashboard.json()["vocabulary_count"] == 1
 
 
+def test_completed_study_group_persists_attempt_history_once(client, auth_headers):
+    book_id = client.get("/api/v1/wordbooks", headers=auth_headers).json()[0]["id"]
+    client.post(f"/api/v1/wordbooks/{book_id}/select", headers=auth_headers)
+    items = client.get(
+        f"/api/v1/study/queue?kind=system&source_id={book_id}&mode=new",
+        headers=auth_headers,
+    ).json()["items"]
+    payload = {
+        "session_id": "study-session-test-0001",
+        "mode": "new",
+        "source_kind": "system",
+        "source_id": book_id,
+        "source_name": "客户端名称不会覆盖数据库名称",
+        "started_at": "2026-09-15T08:00:00Z",
+        "duration_ms": 42000,
+        "round_count": 2,
+        "words": [
+            {
+                "word_id": items[0]["word"]["id"],
+                "mode": "new",
+                "source_kind": "system",
+                "source_id": book_id,
+                "attempts": [
+                    {
+                        "score": 0,
+                        "answer_kind": "forgot",
+                        "round_no": 1,
+                        "response_ms": 1200,
+                        "revealed_before_answer": True,
+                    },
+                    {
+                        "score": 90,
+                        "answer_kind": "remembered",
+                        "round_no": 2,
+                        "response_ms": 800,
+                        "revealed_before_answer": True,
+                    },
+                ],
+            },
+            {
+                "word_id": items[1]["word"]["id"],
+                "mode": "new",
+                "source_kind": "system",
+                "source_id": book_id,
+                "attempts": [
+                    {
+                        "score": 90,
+                        "answer_kind": "remembered",
+                        "round_no": 1,
+                        "response_ms": 600,
+                        "revealed_before_answer": False,
+                    }
+                ],
+            },
+        ],
+    }
+
+    first = client.post(
+        "/api/v1/study/sessions/complete", headers=auth_headers, json=payload
+    )
+    second = client.post(
+        "/api/v1/study/sessions/complete", headers=auth_headers, json=payload
+    )
+    assert first.status_code == 200
+    assert second.json() == first.json()
+    assert first.json()["word_count"] == 2
+    assert first.json()["attempt_count"] == 3
+    assert first.json()["repeated_words"] == 1
+
+    from app.db.session import SessionLocal
+    from app.models import StudyReview, StudySession
+
+    with SessionLocal() as db:
+        session = db.query(StudySession).one()
+        reviews = db.query(StudyReview).order_by(StudyReview.word_id).all()
+        assert session.source_name == "测试词书"
+        assert len(reviews) == 2
+        repeated = next(review for review in reviews if review.attempt_count == 2)
+        assert repeated.rating == "forgot"
+        assert repeated.score_history == [0, 90]
+        assert repeated.forgotten_count == 1
+        assert repeated.fuzzy_count == 0
+        assert repeated.response_ms_total == 2000
+
+    month = __import__("datetime").datetime.now().strftime("%Y-%m")
+    records = client.get(f"/api/v1/records?month={month}", headers=auth_headers).json()
+    today = next(day for day in records["days"] if day["date"] == records["today"])
+    assert today["word_count"] == 2
+    assert today["attempts"] == 3
+
+    changed = {**payload, "duration_ms": 43000}
+    conflict = client.post(
+        "/api/v1/study/sessions/complete", headers=auth_headers, json=changed
+    )
+    assert conflict.status_code == 409
+
+
+def test_study_group_rejects_unfinished_word(client, auth_headers):
+    word_id = client.get("/api/v1/study/queue", headers=auth_headers).json()["items"][0][
+        "word"
+    ]["id"]
+    response = client.post(
+        "/api/v1/study/sessions/complete",
+        headers=auth_headers,
+        json={
+            "session_id": "unfinished-session-0001",
+            "mode": "new",
+            "started_at": "2026-09-15T08:00:00Z",
+            "round_count": 1,
+            "words": [
+                {
+                    "word_id": word_id,
+                    "mode": "new",
+                    "attempts": [
+                        {
+                            "score": 50,
+                            "answer_kind": "fuzzy",
+                            "round_no": 1,
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    assert response.status_code == 422
+
+    valid_payload = {
+        "session_id": "unauthorized-session-0001",
+        "mode": "new",
+        "started_at": "2026-09-15T08:00:00Z",
+        "round_count": 1,
+        "words": [
+            {
+                "word_id": word_id,
+                "mode": "new",
+                "attempts": [
+                    {
+                        "score": 90,
+                        "answer_kind": "remembered",
+                        "round_no": 1,
+                    }
+                ],
+            }
+        ],
+    }
+    unauthorized = client.post("/api/v1/study/sessions/complete", json=valid_payload)
+    assert unauthorized.status_code == 401
+
+
 def test_user_data_is_isolated(client, auth_headers):
     book_id = client.get("/api/v1/wordbooks", headers=auth_headers).json()[0]["id"]
     client.post(f"/api/v1/wordbooks/{book_id}/select", headers=auth_headers)

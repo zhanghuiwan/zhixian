@@ -1,6 +1,6 @@
 # 测试与验证规范
 
-最后核对：2026-09-10。
+最后核对：2026-09-16。
 
 ## 1. 当前自动化基线
 
@@ -83,14 +83,14 @@ docker compose exec -T api alembic current
 curl http://127.0.0.1/api/v1/health
 ```
 
-当前预期 Alembic 为 `0007 (head)`，新增迁移后预期值随之更新并同步修改部署文档。
+当前预期 Alembic 为 `0008 (head)`，新增迁移后预期值随之更新并同步修改部署文档。
 
 迁移至少验证两条路径：
 
 1. 空数据库直接 `alembic upgrade head`；
 2. 生产当前 head 的带数据副本升级到新 head。
 
-`0005` 还要确认旧句子收藏回填原文、译文、文章来源和去重键，并分别检查 SQLite 与 PostgreSQL 的 `SET NULL` 外键。`0006` 要确认旧词标记为系统词、自定义词用户隔离、猜测其他用户词 ID 无法绕过权限，以及个人词能进入学习队列。`0007` 要确认旧会话成为 `manual`、日期为空、同一用户同一本地日期只能有一条 `daily` 会话，手动会话仍可创建多条。
+`0005` 还要确认旧句子收藏回填原文、译文、文章来源和去重键，并分别检查 SQLite 与 PostgreSQL 的 `SET NULL` 外键。`0006` 要确认旧词标记为系统词、自定义词用户隔离、猜测其他用户词 ID 无法绕过权限，以及个人词能进入学习队列。`0007` 要确认旧会话成为 `manual`、日期为空、同一用户同一本地日期只能有一条 `daily` 会话，手动会话仍可创建多条。`0008` 要确认旧评分保留、新增 `attempt_count=1`，并验证整组重复提交、不同 payload 冲突和组内错误次数。
 
 降级只在明确支持时测试。不可安全降级的迁移必须在发布说明中使用数据库恢复方案，不能提供虚假的回滚保证。
 
@@ -156,7 +156,7 @@ python -m app.db.import_wordlist \
 - Web lint: passed
 - Web build: passed
 - Compose config: passed
-- PostgreSQL bootstrap: 0007 (head), 7,416 dictionary terms, 6 published preset books
+- PostgreSQL bootstrap: 0008 (head), 7,416 dictionary terms, 6 published preset books
 - Manual: AI Markdown/actions, learning hub, reading, sentences and records at 360px/desktop passed
 ```
 

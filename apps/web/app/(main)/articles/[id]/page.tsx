@@ -5,6 +5,7 @@ import { FormEvent, use, useCallback, useEffect, useRef, useState } from "react"
 import { Bookmark, ChevronLeft, PanelRightOpen, Send, Sparkles, Volume2, X } from "@/components/icons";
 import { InlineLoader } from "@/components/feedback";
 import { ApiError, api, streamApi } from "@/lib/api";
+import { speakEnglish } from "@/lib/pronunciation";
 import type { ArticleDetail, Word } from "@/lib/types";
 
 type SelectionState = { text: string; sentenceId?: number; translation?: string };
@@ -82,7 +83,7 @@ export default function ArticleReaderPage({ params }: { params: Promise<{ id: st
     setArticle((current) => current ? { ...current, sentences: current.sentences.map((sentence) => sentence.id === sentenceId ? { ...sentence, is_bookmarked: !active } : sentence) } : current);
   }
   async function saveSelectedWord() { if (selectedWord) { await api("/vocabulary", { method: "POST", body: JSON.stringify({ word_id: selectedWord.id, source_type: "article", source_ref: id }) }); setWordSaved(true); } }
-  function speak(text: string) { if ("speechSynthesis" in window) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } }
+  function speak(text: string) { speakEnglish(text); }
   function askAboutSelection(action: "explain" | "translate") {
     if (!selection) return;
     setAiOpen(true);

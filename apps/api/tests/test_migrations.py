@@ -94,3 +94,43 @@ def test_0007_preserves_existing_conversations_as_manual(tmp_path):
         ).one()
     assert row.conversation_type == "manual"
     assert row.local_date is None
+
+
+def test_0008_preserves_old_reviews_and_adds_group_session_tables(tmp_path):
+    database_path = tmp_path / "study-session-migration.db"
+    database_url = f"sqlite:///{database_path.as_posix()}"
+    run_alembic(database_url, "0007")
+
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO users (email, password_hash, nickname) "
+                "VALUES ('study@example.com', 'hash', 'Study')"
+            )
+        )
+        connection.execute(
+            text("INSERT INTO words (term, translation) VALUES ('durable', '持久的')")
+        )
+        user_id = connection.scalar(text("SELECT id FROM users WHERE email='study@example.com'"))
+        word_id = connection.scalar(text("SELECT id FROM words WHERE term='durable'"))
+        connection.execute(
+            text(
+                "INSERT INTO study_reviews (user_id, word_id, rating) "
+                "VALUES (:user_id, :word_id, 'good')"
+            ),
+            {"user_id": user_id, "word_id": word_id},
+        )
+
+    run_alembic(database_url, "head")
+    inspector = inspect(engine)
+    assert "study_sessions" in inspector.get_table_names()
+    review_columns = {column["name"] for column in inspector.get_columns("study_reviews")}
+    assert {"session_id", "attempt_count", "score_history"} <= review_columns
+    with engine.connect() as connection:
+        row = connection.execute(
+            text("SELECT rating, attempt_count, session_id FROM study_reviews")
+        ).one()
+    assert row.rating == "good"
+    assert row.attempt_count == 1
+    assert row.session_id is None

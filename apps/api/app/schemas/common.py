@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
@@ -139,6 +139,64 @@ class ReviewResult(BaseModel):
     interval_days: int
     mastery_score: int
     next_review_at: datetime
+
+
+class StudySessionAttempt(BaseModel):
+    score: int = Field(ge=0, le=100)
+    answer_kind: Literal["forgot", "fuzzy", "remembered", "slider", "quick"]
+    round_no: int = Field(ge=1, le=100)
+    response_ms: int = Field(default=0, ge=0, le=3_600_000)
+    revealed_before_answer: bool = False
+
+
+class StudySessionWord(BaseModel):
+    word_id: int = Field(ge=1)
+    mode: Literal["new", "review"]
+    source_kind: Literal["system", "personal", "all"] = "all"
+    source_id: int | None = Field(default=None, ge=1)
+    attempts: list[StudySessionAttempt] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_completed_word(self):
+        if self.source_kind in {"system", "personal"} and self.source_id is None:
+            raise ValueError("所选词书缺少来源 ID")
+        if self.attempts[-1].score < 80:
+            raise ValueError("整组提交前，每个单词都必须完成本轮巩固")
+        return self
+
+
+class StudySessionComplete(BaseModel):
+    session_id: str = Field(min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    mode: Literal["all", "new", "review"]
+    source_kind: Literal["system", "personal", "all"] = "all"
+    source_id: int | None = Field(default=None, ge=1)
+    source_name: str = Field(default="综合学习", min_length=1, max_length=120)
+    started_at: datetime
+    duration_ms: int = Field(default=0, ge=0, le=86_400_000)
+    round_count: int = Field(ge=1, le=100)
+    words: list[StudySessionWord] = Field(min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def validate_session(self):
+        if self.source_kind in {"system", "personal"} and self.source_id is None:
+            raise ValueError("所选词书缺少来源 ID")
+        word_ids = [item.word_id for item in self.words]
+        if len(word_ids) != len(set(word_ids)):
+            raise ValueError("同一学习组不能重复提交单词")
+        highest_round = max(attempt.round_no for word in self.words for attempt in word.attempts)
+        if highest_round != self.round_count:
+            raise ValueError("学习轮数与答题记录不一致")
+        return self
+
+
+class StudySessionResult(BaseModel):
+    session_id: str
+    word_count: int
+    attempt_count: int
+    repeated_words: int
+    round_count: int
+    duration_ms: int
+    completed_at: datetime
 
 
 class VocabularyCreate(BaseModel):

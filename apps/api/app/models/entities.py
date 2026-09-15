@@ -284,11 +284,39 @@ class UserWordProgress(Base):
     word: Mapped[Word] = relationship()
 
 
+class StudySession(Base):
+    __tablename__ = "study_sessions"
+    __table_args__ = (
+        UniqueConstraint("user_id", "client_session_id", name="uq_study_session_client"),
+        Index("ix_study_sessions_user_completed", "user_id", "completed_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    client_session_id: Mapped[str] = mapped_column(String(64))
+    mode: Mapped[str] = mapped_column(String(20))
+    source_kind: Mapped[str] = mapped_column(String(20), default="all")
+    source_id: Mapped[int | None] = mapped_column(Integer)
+    source_name: Mapped[str] = mapped_column(String(120), default="综合学习")
+    word_count: Mapped[int] = mapped_column(Integer)
+    attempt_count: Mapped[int] = mapped_column(Integer)
+    repeated_words: Mapped[int] = mapped_column(Integer)
+    round_count: Mapped[int] = mapped_column(Integer)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    started_at: Mapped[datetime] = mapped_column(DateTime)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    result_snapshot: Mapped[dict] = mapped_column(JSON)
+
+
 class StudyReview(Base):
     __tablename__ = "study_reviews"
     __table_args__ = (
         Index("ix_reviews_user_time", "user_id", "reviewed_at"),
         UniqueConstraint("user_id", "request_id", name="uq_review_request"),
+        UniqueConstraint("session_id", "word_id", name="uq_review_session_word"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -304,6 +332,18 @@ class StudyReview(Base):
     mode: Mapped[str] = mapped_column(String(20), default="legacy")
     request_id: Mapped[str | None] = mapped_column(String(64))
     result_snapshot: Mapped[dict | None] = mapped_column(JSON)
+    session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("study_sessions.id", ondelete="SET NULL"), index=True
+    )
+    familiarity_score: Mapped[int | None] = mapped_column(Integer)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=1)
+    forgotten_count: Mapped[int] = mapped_column(Integer, default=0)
+    fuzzy_count: Mapped[int] = mapped_column(Integer, default=0)
+    round_count: Mapped[int] = mapped_column(Integer, default=1)
+    score_history: Mapped[list[int] | None] = mapped_column(JSON)
+    attempt_history: Mapped[list[dict] | None] = mapped_column(JSON)
+    revealed_count: Mapped[int] = mapped_column(Integer, default=0)
+    response_ms_total: Mapped[int] = mapped_column(Integer, default=0)
 
     word: Mapped[Word] = relationship()
 

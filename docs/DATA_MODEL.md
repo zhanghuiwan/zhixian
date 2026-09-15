@@ -1,6 +1,6 @@
 # 数据模型
 
-最后核对：2026-09-15。权威实现位于 `apps/api/app/models/entities.py`，生产迁移 head 为 `0007`。
+最后核对：2026-09-16。权威实现位于 `apps/api/app/models/entities.py`，生产迁移 head 为 `0008`。
 
 ## 1. 总体规则
 
@@ -17,6 +17,7 @@
 erDiagram
     USERS ||--o{ USER_WORD_PROGRESS : learns
     USERS ||--o{ STUDY_REVIEWS : submits
+    USERS ||--o{ STUDY_SESSIONS : completes
     USERS ||--o{ VOCABULARY_ITEMS : owns
     USERS ||--o{ USER_CUSTOM_WORDS : owns
     USERS ||--o{ VOCABULARY_COLLECTIONS : owns
@@ -34,6 +35,7 @@ erDiagram
     WORDS ||--o{ WORDLIST_SOURCE_ENTRIES : traced_to
     WORDS ||--o{ USER_WORD_PROGRESS : tracks
     WORDS ||--o{ STUDY_REVIEWS : reviewed_as
+    STUDY_SESSIONS ||--o{ STUDY_REVIEWS : contains
     WORDS ||--o{ VOCABULARY_ITEMS : referenced_by
     WORDS ||--o{ USER_CUSTOM_WORDS : visible_through
     VOCABULARY_ITEMS ||--o{ VOCABULARY_COLLECTION_ITEMS : categorized_by
@@ -94,7 +96,11 @@ erDiagram
 
 ### `study_reviews`
 
-不可替代的评分历史：用户、单词、评分、前后间隔和发生时间。`source_kind/source_id/source_name` 保存当次学习来源，`mode` 区分新学与复习，`(user_id, request_id)` 防止网络重试重复计分，`result_snapshot` 用于返回首次提交的确定结果。
+不可替代的逐词学习历史：用户、单词、组内结果、前后间隔和发生时间。`source_kind/source_id/source_name` 保存当次学习来源，`mode` 区分新学与复习。组学习记录额外保存最终熟悉度、尝试/错误次数、经过轮数、完整分数与答题序列、查看答案次数和总响应时间；`(session_id, word_id)` 保证一组内每词只写一次。旧单次接口继续用 `(user_id, request_id)` 防止网络重试重复计分。
+
+### `study_sessions`
+
+每个完成的学习组一条记录，保存当前用户、客户端会话 ID、模式、词书来源、单词/尝试/重复词数量、轮数、用时和起止时间。`(user_id, client_session_id)` 唯一，`payload_hash` 用来拒绝同一会话 ID 的不同内容，`result_snapshot` 使完全相同的重试返回首次结果。组记录和逐词评分在同一事务提交；未完成组只存在当前浏览器，不写数据库。
 
 ### `daily_study_plans` / `daily_study_plan_items`
 
@@ -193,7 +199,7 @@ erDiagram
 1. 修改 ORM 和 Pydantic/前端契约。
 2. 新增下一编号 Alembic 迁移并审阅升级/降级。
 3. 从空库运行到 head。
-4. 从上一个生产 head 的带数据副本升级，检查约束、默认值和数据保留；`0005` 必须验证旧句子收藏快照回填，`0006` 必须确认旧词统一回填为 `system`，`0007` 必须确认旧会话标记为 `manual` 且日期为空。
+4. 从上一个生产 head 的带数据副本升级，检查约束、默认值和数据保留；`0005` 必须验证旧句子收藏快照回填，`0006` 必须确认旧词统一回填为 `system`，`0007` 必须确认旧会话标记为 `manual` 且日期为空，`0008` 必须确认旧评分保留且新增尝试次数字段默认为 1。
 5. 运行后端测试，并在 Docker PostgreSQL 演练。
 6. 更新本文、API 和部署影响。
 7. 生产部署前备份；迁移失败时按恢复方案处理，不能边试边手工改表。

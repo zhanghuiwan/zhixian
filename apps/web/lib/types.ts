@@ -45,6 +45,42 @@ export interface StudyQueueItem {
   intervals: Record<"again" | "hard" | "good" | "easy", string>;
 }
 
+export interface StudyAttempt {
+  score: number;
+  answer_kind: "forgot" | "fuzzy" | "remembered" | "slider" | "quick";
+  round_no: number;
+  response_ms: number;
+  revealed_before_answer: boolean;
+}
+
+export interface StudySessionDraft {
+  version: 2;
+  context_key: string;
+  session_id: string;
+  mode: "all" | "new" | "review";
+  source_kind: "system" | "personal" | "all";
+  source_id: number | null;
+  source_name: string;
+  items: StudyQueueItem[];
+  active_word_ids: number[];
+  next_round_word_ids: number[];
+  attempts: Record<string, StudyAttempt[]>;
+  round_no: number;
+  started_at: string;
+  duration_ms?: number;
+  view_mode: "card" | "quick";
+}
+
+export interface StudySessionResult {
+  session_id: string;
+  word_count: number;
+  attempt_count: number;
+  repeated_words: number;
+  round_count: number;
+  duration_ms: number;
+  completed_at: string;
+}
+
 export interface Article {
   id: number;
   title: string;
