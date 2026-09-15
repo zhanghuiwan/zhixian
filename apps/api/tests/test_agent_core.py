@@ -6,7 +6,12 @@ from sqlalchemy import select
 from app.db.session import SessionLocal
 from app.models import AIConversation, AIMessage, StudyReview, User, Word
 from app.services.ai.providers import ProviderStreamEvent
-from app.services.ai.interaction import build_response_actions, classify_input
+from app.services.ai.interaction import (
+    build_response_actions,
+    classify_input,
+    extract_primary_translation,
+    input_instruction,
+)
 from app.services.ai.tools import execute_tool
 from app.services.learning_insights import get_review_plan, learning_history, local_today
 
@@ -38,6 +43,19 @@ def test_english_input_classifier_is_deterministic():
     assert classify_input("One sentence. Two sentences. Three sentences.").kind == "english_article"
     assert classify_input("请翻译 The lake is quiet.").kind == "general"
     assert classify_input("https://example.com/english").kind == "general"
+    word_instruction = input_instruction(classify_input("tranquil"))
+    assert all(
+        heading in word_instruction
+        for heading in ["核心释义", "分义项与语境", "词形与语法", "常见用法", "例句", "易混词"]
+    )
+    sentence_instruction = input_instruction(classify_input("The lake is quiet."))
+    assert all(
+        heading in sentence_instruction
+        for heading in ["中文翻译", "语义拆解", "关键表达", "句型与语法", "语境与译法"]
+    )
+    assert extract_primary_translation(
+        "## 中文翻译\n\n> **湖面很平静。**\n\n## 语义拆解\n\n详细说明。"
+    ) == "湖面很平静。"
 
 
 def test_learning_history_plan_and_timezone_boundaries(client, auth_headers):
@@ -181,7 +199,14 @@ def test_daily_conversation_reuse_manual_new_and_sentence_action(
     class TranslationProvider:
         async def stream_chat(self, *, messages, tools=None):
             assert "默认任务是准确、自然地翻译成中文" in messages[1]["content"]
-            yield ProviderStreamEvent(kind="text", content="湖面很平静。")
+            assert "语境与译法" in messages[1]["content"]
+            yield ProviderStreamEvent(
+                kind="text",
+                content=(
+                    "## 中文翻译\n\n> **湖面很平静。**\n\n"
+                    "## 语义拆解\n\n`tranquil` 强调平和、没有扰动。"
+                ),
+            )
             yield ProviderStreamEvent(kind="finish", finish_reason="stop")
 
     monkeypatch.setattr(
@@ -202,6 +227,7 @@ def test_daily_conversation_reuse_manual_new_and_sentence_action(
     second_payload = completed_payload(second)
     assert first_payload["actions"][0]["type"] == "save_sentence"
     assert second_payload["actions"][0]["type"] == "save_sentence"
+    assert first_payload["actions"][0]["payload"]["translation"] == "湖面很平静。"
 
     conversations = client.get(
         "/api/v1/ai/conversations", headers=auth_headers
@@ -257,6 +283,8 @@ def test_word_lookup_returns_collection_actions(client, auth_headers, monkeypatc
 
         async def stream_chat(self, *, messages, tools=None):
             self.calls += 1
+            assert "英式/美式音标" in messages[1]["content"]
+            assert "易混词" in messages[1]["content"]
             if self.calls == 1:
                 yield ProviderStreamEvent(
                     kind="tool_call",
@@ -283,6 +311,11 @@ def test_word_lookup_returns_collection_actions(client, auth_headers, monkeypatc
     assert payload["actions"][0]["type"] == "add_word_to_collection"
     assert payload["actions"][0]["label"] == "加入默认生词本"
     assert payload["actions"][0]["payload"]["term"] == "wander"
+    assert set(payload["actions"][0]["payload"]) == {
+        "term",
+        "word_id",
+        "collection_id",
+    }
 
 
 def test_missing_word_returns_custom_word_action(client):

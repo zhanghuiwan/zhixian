@@ -258,9 +258,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .markdown-message p, .markdown-message ul, .markdown-message ol, .markdown-message blockquote, .markdown-message pre, .markdown-message table { margin: 0 0 12px; }
 .markdown-message ul, .markdown-message ol { padding-left: 22px; }
 .markdown-message li + li { margin-top: 4px; }
-.markdown-message h1, .markdown-message h2, .markdown-message h3 { margin: 16px 0 8px; color: var(--ink); line-height: 1.35; }
-.markdown-message h1 { font-size: 20px; }.markdown-message h2 { font-size: 17px; }.markdown-message h3 { font-size: 15px; }
+.markdown-message h1, .markdown-message h2, .markdown-message h3, .markdown-message h4 { margin: 16px 0 8px; color: var(--ink); line-height: 1.35; }
+.markdown-message h1 { font-size: 20px; }.markdown-message h2 { font-size: 17px; }.markdown-message h3 { font-size: 15px; }.markdown-message h4 { font-size: 13px; }
 .markdown-message blockquote { padding-left: 12px; border-left: 3px solid var(--green-pale); color: var(--muted); }
+.markdown-message blockquote p { margin-bottom: 0; }.markdown-message strong { color: var(--green-dark); }.markdown-message hr { margin: 16px 0; border: 0; border-top: 1px solid var(--line); }
 .markdown-message code { padding: 2px 5px; border-radius: 5px; background: var(--paper-deep); font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
 .markdown-message pre { max-width: 100%; overflow-x: auto; padding: 12px; border-radius: 9px; background: #edf1ee; }
 .markdown-message pre code { padding: 0; background: transparent; }

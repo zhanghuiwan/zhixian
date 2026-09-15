@@ -120,6 +120,8 @@ python scripts/verify_live_agent.py
 
 如果没有用户授权、有效凭证或额度，记录“未执行真实 Provider 冒烟测试”，不要把 mock 结果说成真实连通。
 
+`verify_live_agent.py` 当前以一次性 SQLite 数据库验证 MiniMax-M3 的详细查词与翻译栏目、查词 Tool Call、精简入本/收藏 payload、SSE、加密配置和会话持久化。脚本只输出布尔结果，不打印模型正文或 Key。
+
 ## 8. 词库质量门禁
 
 每个候选词库至少产生机器可读报告：

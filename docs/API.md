@@ -130,6 +130,8 @@ Provider 枚举当前为 `deepseek|minimax`。保存前服务器必须配置 `AI
 
 消息读取响应中的 assistant 消息可包含 `actions`。每项包含稳定 `id`、白名单 `type`、显示 `label` 和结构化 `payload`；当前类型为 `add_word_to_collection`、`request_custom_word`、`save_sentence`、`import_article`、`navigate`。这些操作来自服务端规则和已校验工具结果，不把模型正文解析为指令。
 
+展示内容与写入数据分离：`add_word_to_collection` 只携带 `term`、`word_id`、`collection_id`，不会把完整 AI 讲解复制进词典；`save_sentence` 的 `translation` 只取固定“中文翻译”章节中的规范译文，不包含后续语义和语法分析。前端仍需按对应业务 API 写入，不能直接信任 payload 绕过服务端校验。
+
 已有会话不能中途切换 Provider。创建对话和保存用户消息在流开始前完成，因此即使浏览器随后断开，该用户消息仍可能已经持久化。
 
 ## 10. SSE 请求与事件
