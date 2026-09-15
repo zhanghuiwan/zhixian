@@ -6,7 +6,7 @@
 
 | 层 | 当前门禁 | 位置 |
 |---|---|---|
-| 后端 | pytest，当前 29 个测试函数 | `apps/api/tests` |
+| 后端 | pytest，当前 35 个测试函数 | `apps/api/tests` |
 | 前端 | ESLint + TypeScript/Next.js production build | `apps/web` |
 | CI | Python 3.13、Node 24；push `main` 和 PR 触发 | `.github/workflows/ci.yml` |
 | 容器 | Compose 配置解析、镜像构建、健康检查 | `compose.yaml` |
@@ -47,7 +47,7 @@ Windows PowerShell 使用 `..\..\.venv\Scripts\python.exe -m pytest`。不要依
 | 路由/schema | 成功、422 校验、401、资源不存在、他人资源隔离 |
 | 用户写操作 | 重复请求/唯一约束、事务失败、越权和删除语义 |
 | ORM/迁移 | 空库升级、旧库升级、SQLite、Docker PostgreSQL、head 检查 |
-| Agent 工具 | 参数校验、用户隔离、幂等、确认/取消、审计和工具上限 |
+| Agent 工具 | 参数校验、用户隔离、幂等、确认/取消、审计、工具上限、每日会话和上下文操作 |
 | Provider | 使用 mock 覆盖流式分片、工具调用、用量和错误映射 |
 | 前端页面 | lint/build + 加载/空/错误/401 + 360px/桌面人工检查 |
 | SSE | 文本分片、多个 data 行、工具事件、未知事件、中止和刷新恢复 |
@@ -83,14 +83,14 @@ docker compose exec -T api alembic current
 curl http://127.0.0.1/api/v1/health
 ```
 
-当前预期 Alembic 为 `0006 (head)`，新增迁移后预期值随之更新并同步修改部署文档。
+当前预期 Alembic 为 `0007 (head)`，新增迁移后预期值随之更新并同步修改部署文档。
 
 迁移至少验证两条路径：
 
 1. 空数据库直接 `alembic upgrade head`；
 2. 生产当前 head 的带数据副本升级到新 head。
 
-`0005` 还要确认旧句子收藏回填原文、译文、文章来源和去重键，并分别检查 SQLite 与 PostgreSQL 的 `SET NULL` 外键。`0006` 要确认旧词标记为系统词、自定义词用户隔离、猜测其他用户词 ID 无法绕过权限，以及个人词能进入学习队列。
+`0005` 还要确认旧句子收藏回填原文、译文、文章来源和去重键，并分别检查 SQLite 与 PostgreSQL 的 `SET NULL` 外键。`0006` 要确认旧词标记为系统词、自定义词用户隔离、猜测其他用户词 ID 无法绕过权限，以及个人词能进入学习队列。`0007` 要确认旧会话成为 `manual`、日期为空、同一用户同一本地日期只能有一条 `daily` 会话，手动会话仍可创建多条。
 
 降级只在明确支持时测试。不可安全降级的迁移必须在发布说明中使用数据库恢复方案，不能提供虚假的回滚保证。
 
@@ -150,12 +150,12 @@ python -m app.db.import_wordlist \
 最终说明中逐项写实际结果，例如：
 
 ```text
-- Backend: 26 passed
+- Backend: 35 passed
 - Web lint: passed
 - Web build: passed
 - Compose config: passed
-- PostgreSQL bootstrap: 0006 (head), 7,416 dictionary terms, 6 published preset books
-- Manual: AI home, books, study, reading, sentences and records at 360px/desktop passed
+- PostgreSQL bootstrap: 0007 (head), 7,416 dictionary terms, 6 published preset books
+- Manual: AI Markdown/actions, learning hub, reading, sentences and records at 360px/desktop passed
 ```
 
 不要只写“测试完成”。失败、跳过、警告和环境限制都应保留，这些信息是下一位接手者的起点。

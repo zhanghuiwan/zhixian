@@ -73,6 +73,7 @@ apps/web/.env.example
 - Provider `base_url` 来自代码白名单，禁止任意 URL，防止 SSRF 和凭证外送。
 - 日志、审计、异常、SSE、数据库 fixture 和 mock 断言都不得包含完整 Key。
 - 模型输出不是授权。工具名和参数需白名单/Pydantic 校验，数据库服务再次验证用户所有权。
+- 回答后的快捷操作由服务端根据输入分类和已验证工具结果生成，前端再校验操作类型、参数和站内路径；禁止从模型 Markdown 正文提取命令或执行任意 URL。
 - 删除等破坏性写入要求确认；确认端点执行数据库中锁定的已校验参数。
 - 工具轮数、数量、Token 和超时保持上限，避免失控费用和拒绝服务。
 - Prompt injection 不能获得任意 SQL、HTTP、文件系统或代码执行工具。
@@ -90,7 +91,7 @@ apps/web/.env.example
 ## 8. 输入、内容和未来上传
 
 - 所有 API 输入声明长度、类型、枚举和范围；数据库再用唯一约束/外键防守。
-- 输出到 HTML 的外部内容按文本渲染，不使用未经消毒的 `dangerouslySetInnerHTML`。
+- AI Markdown 使用不启用原始 HTML 的解析器，链接在新窗口打开并设置 `noopener/noreferrer`；其他外部内容按文本渲染，不使用未经消毒的 `dangerouslySetInnerHTML`。
 - 外部词库过滤控制字符、HTML/script、超长字段和异常 Unicode，详见 `WORDLIST_PIPELINE.md`。
 - PDF/OCR/图片上传启用前必须实现：扩展名与 MIME 双检、大小/页数限制、随机存储名、目录穿越防护、用户配额、隔离处理、超时、临时文件清理和恶意文件策略。
 - 上传文件不得由 Nginx 直接按用户提供的内容类型执行或内联展示。

@@ -125,6 +125,24 @@ class ReadingResult(BaseModel):
     is_completed: bool
 
 
+class ArticleImportCreate(BaseModel):
+    content: str = Field(min_length=20, max_length=20000)
+    title: str | None = Field(default=None, max_length=250)
+
+    @field_validator("content")
+    @classmethod
+    def clean_content(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not any(character.isascii() and character.isalpha() for character in cleaned):
+            raise ValueError("文章需要包含英文正文")
+        return cleaned
+
+    @field_validator("title")
+    @classmethod
+    def clean_title(cls, value: str | None) -> str | None:
+        return value.strip() if value and value.strip() else None
+
+
 class RecordWord(BaseModel):
     id: int
     term: str

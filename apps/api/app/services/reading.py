@@ -1,4 +1,5 @@
 import hashlib
+import re
 
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -7,12 +8,67 @@ from sqlalchemy.orm import Session
 from app.models import AIConversation, Article, ArticleSentence, ReadingActivity, ReadingProgress, SentenceBookmark, User
 from app.models.entities import utc_now
 from app.schemas.common import ArticleDetail, ArticleListItem, BookmarkRead, SentenceRead
-from app.schemas.workspace import BookmarkCreate, ReadingResult, ReadingUpdate
+from app.schemas.workspace import ArticleImportCreate, BookmarkCreate, ReadingResult, ReadingUpdate
 from app.services.learning_insights import local_today
 
 
 class ReadingError(ValueError):
     pass
+
+
+def import_article_text(
+    db: Session, user: User, payload: ArticleImportCreate
+) -> Article:
+    content = payload.content.strip()
+    content_hash = hashlib.sha256(content.encode()).hexdigest()
+    slug = f"user-{user.id}-import-{content_hash[:24]}"
+    existing = db.scalar(
+        select(Article).where(
+            Article.slug == slug,
+            Article.owner_user_id == user.id,
+        )
+    )
+    if existing is not None:
+        return existing
+    segments = [
+        segment.strip()
+        for segment in re.split(r"(?<=[.!?])\s+|\n+", content)
+        if segment.strip()
+    ]
+    if not segments:
+        raise ReadingError("没有识别到可阅读的英文正文")
+    title = payload.title or segments[0][:120]
+    article = Article(
+        title=title[:250],
+        slug=slug,
+        title_zh="我的导入文章",
+        summary="从 AI 对话保存的英文原文，可在阅读页继续精读。",
+        level="通用",
+        topic="导入",
+        read_minutes=max(1, round(len(content.split()) / 180)),
+        cover_gradient="forest",
+        is_published=False,
+        owner_user_id=user.id,
+        source_type="user_import",
+        generation_metadata={
+            "source": "assistant_action",
+            "content_sha256": content_hash,
+        },
+    )
+    db.add(article)
+    db.flush()
+    for position, segment in enumerate(segments[:300], 1):
+        db.add(
+            ArticleSentence(
+                article_id=article.id,
+                position=position,
+                text=segment,
+                translation="",
+            )
+        )
+    db.commit()
+    db.refresh(article)
+    return article
 
 
 def visible_articles(user: User | None):

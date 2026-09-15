@@ -72,6 +72,7 @@
 ## 6. 文章、查词与收藏
 
 - `GET /articles`：公开文章列表，仅返回已发布内容。
+- `POST /articles/import-text`：登录用户把 20～20,000 字符、至少含一个英文字母的文本幂等保存为私有阅读文章；可选标题，重复正文返回同一文章。
 - `GET /articles/{article_id}`：登录后读取文章和句子；允许已发布文章或当前用户自己的私有草稿。
 - `GET /words/lookup?term=`：登录后查询系统词和当前用户拥有的自定义词，term 长度 1～100；不泄露其他用户的自定义词。
 - `GET /articles/bookmarks`：当前用户收藏。
@@ -116,7 +117,8 @@ Provider 枚举当前为 `deepseek|minimax`。保存前服务器必须配置 `AI
 ## 9. AI 会话
 
 - `GET /ai/conversations`：未归档会话。
-- `POST /ai/conversations`：创建会话；可选 Provider，模型固定为当前配置。
+- `GET /ai/conversations/today`：返回用户本地日期对应的未归档默认会话；尚未发送消息时返回 `null`。
+- `POST /ai/conversations`：显式创建 `manual` 会话；可选 Provider，模型固定为当前配置。
 - `GET /ai/conversations/{id}/messages`：按消息 ID 顺序恢复完整消息。
 - `GET /ai/conversations/{id}/tool-runs`：恢复工具执行和确认卡片。
 - `PATCH /ai/conversations/{id}`：重命名、归档或取消归档。
@@ -124,7 +126,9 @@ Provider 枚举当前为 `deepseek|minimax`。保存前服务器必须配置 `AI
 - `POST /ai/chat/stream`：发送消息并接收 SSE。
 - `POST /ai/tool-runs/{id}/confirm`：确认或取消待处理危险操作。
 
-对话主页默认不加载为可见侧栏，但会话仍完整持久化。Agent 提供 `search_conversation_history` 领域工具，可按关键词扫描当前用户全部会话并返回每次最多 30 条受限片段；这不是向量检索，也不会把全部历史在每轮发送给模型。
+会话响应增加 `conversation_type=daily|manual` 和可空 `local_date`。未传 `conversation_id` 的聊天按用户 IANA 时区复用当天 `daily` 会话；只有显式新建才产生 `manual` 会话。当日默认会话被归档后，`/today` 返回 `null`；用户当天再次发送默认消息时会重新激活原会话，避免重复当日会话。对话主页默认不显示历史侧栏，但会话仍完整持久化并在进入页面时恢复当天会话。Agent 提供 `search_conversation_history` 领域工具，可按关键词扫描当前用户全部会话并返回每次最多 30 条受限片段；这不是向量检索，也不会把全部历史在每轮发送给模型。
+
+消息读取响应中的 assistant 消息可包含 `actions`。每项包含稳定 `id`、白名单 `type`、显示 `label` 和结构化 `payload`；当前类型为 `add_word_to_collection`、`request_custom_word`、`save_sentence`、`import_article`、`navigate`。这些操作来自服务端规则和已校验工具结果，不把模型正文解析为指令。
 
 已有会话不能中途切换 Provider。创建对话和保存用户消息在流开始前完成，因此即使浏览器随后断开，该用户消息仍可能已经持久化。
 
@@ -154,7 +158,7 @@ Content-Type: application/json
 |---|---|
 | `conversation.created` | 返回本次使用的会话 ID；续接会话也会发送 |
 | `message.delta` | assistant 文本增量 |
-| `message.completed` | 最终消息 ID 和完整内容 |
+| `message.completed` | 最终消息 ID、完整内容和可选白名单 `actions` |
 | `usage.completed` | Provider、模型、Token 和耗时 |
 | `tool.started` | 工具开始 |
 | `tool.completed` | 普通工具成功及结构化结果 |
@@ -165,7 +169,7 @@ Content-Type: application/json
 
 连接中止不等于服务器事务回滚或后台取消。当前实现没有断点续传；重新打开会话应通过 messages 和 tool-runs 接口恢复持久化状态。
 
-前端恢复工具记录时只保留写操作、确认和需要长期展示的结果。查词、学习历史、复习计划、易错词、生词本列表和历史检索等只读状态只在当前请求期间显示，并在最终回答完成后清理。
+前端恢复工具记录时只保留写操作、确认和需要长期展示的结果。查词、学习历史、复习计划、易错词、生词本列表和历史检索等只读状态只在当前请求期间显示，并在最终回答完成后清理。回答 `actions` 随 assistant 消息持久化，刷新后仍可恢复；前端再次验证类型、参数和站内路径白名单。
 
 ## 11. 确认协议
 

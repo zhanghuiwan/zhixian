@@ -134,10 +134,26 @@ export interface AIConversation {
   title: string;
   provider: AIProviderName;
   model: string;
+  conversation_type: "daily" | "manual";
+  local_date: string | null;
   created_at: string;
   updated_at: string;
   archived_at: string | null;
   message_count: number;
+}
+
+export type AIActionType =
+  | "add_word_to_collection"
+  | "request_custom_word"
+  | "save_sentence"
+  | "import_article"
+  | "navigate";
+
+export interface AIResponseAction {
+  id: string;
+  type: AIActionType;
+  label: string;
+  payload: Record<string, unknown>;
 }
 
 export interface AIMessage {
@@ -149,6 +165,7 @@ export interface AIMessage {
   prompt_tokens: number;
   completion_tokens: number;
   created_at: string;
+  actions: AIResponseAction[];
 }
 
 export interface AIToolRun {

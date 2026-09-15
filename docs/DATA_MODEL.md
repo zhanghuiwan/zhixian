@@ -1,6 +1,6 @@
 # 数据模型
 
-最后核对：2026-09-10。权威实现位于 `apps/api/app/models/entities.py`，生产迁移 head 为 `0006`。
+最后核对：2026-09-15。权威实现位于 `apps/api/app/models/entities.py`，生产迁移 head 为 `0007`。
 
 ## 1. 总体规则
 
@@ -153,11 +153,11 @@ erDiagram
 
 ### `ai_conversations`
 
-会话归属用户并固定 Provider/模型，保存标题、轻量摘要、创建/更新时间和可选归档时间。归档不是删除；删除会话级联删除消息和工具审计。
+会话归属用户并固定 Provider/模型，保存标题、轻量摘要、创建/更新时间和可选归档时间。`conversation_type` 区分按天复用的 `daily` 与显式创建的 `manual`；`daily` 记录用户本地 `local_date`，唯一约束 `(user_id, conversation_type, local_date)` 防止并发创建重复当日会话。`manual` 的日期为空，可创建多条。归档不是删除；删除会话级联删除消息和工具审计。
 
 ### `ai_messages`
 
-持久化 user、assistant、tool 消息，包含工具调用结构、Provider 元数据和 Token 用量。会话内按 ID/创建时间恢复顺序。
+持久化 user、assistant、tool 消息，包含工具调用结构、Provider 元数据和 Token 用量。assistant 的 `provider_metadata` 可保存输入分类与服务端生成的白名单 `actions`，用于刷新恢复；不能把模型正文当成可执行指令。会话内按 ID/创建时间恢复顺序。
 
 ### `ai_tool_runs`
 
@@ -193,7 +193,7 @@ erDiagram
 1. 修改 ORM 和 Pydantic/前端契约。
 2. 新增下一编号 Alembic 迁移并审阅升级/降级。
 3. 从空库运行到 head。
-4. 从上一个生产 head 的带数据副本升级，检查约束、默认值和数据保留；`0005` 必须验证旧句子收藏快照回填，`0006` 必须确认旧词统一回填为 `system`。
+4. 从上一个生产 head 的带数据副本升级，检查约束、默认值和数据保留；`0005` 必须验证旧句子收藏快照回填，`0006` 必须确认旧词统一回填为 `system`，`0007` 必须确认旧会话标记为 `manual` 且日期为空。
 5. 运行后端测试，并在 Docker PostgreSQL 演练。
 6. 更新本文、API 和部署影响。
 7. 生产部署前备份；迁移失败时按恢复方案处理，不能边试边手工改表。

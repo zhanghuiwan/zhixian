@@ -270,3 +270,49 @@ def test_custom_words_are_owned_labeled_and_available_for_study(
     assert client.get(
         "/api/v1/words/lookup?term=moonbow", headers=second_headers
     ).status_code == 200
+
+
+def test_imported_article_is_private_and_idempotent(client, auth_headers):
+    invalid = client.post(
+        "/api/v1/articles/import-text",
+        headers=auth_headers,
+        json={"content": "这是一段没有英文正文的测试内容。"},
+    )
+    assert invalid.status_code == 422
+
+    content = (
+        "A long path crossed the quiet forest. "
+        "Birds moved between the trees. The lake waited beyond them."
+    )
+    first = client.post(
+        "/api/v1/articles/import-text",
+        headers=auth_headers,
+        json={"title": "A Quiet Path", "content": content},
+    )
+    repeated = client.post(
+        "/api/v1/articles/import-text",
+        headers=auth_headers,
+        json={"title": "A Quiet Path", "content": content},
+    )
+    assert first.status_code == 201
+    assert repeated.status_code == 201
+    assert first.json()["id"] == repeated.json()["id"]
+    article_id = first.json()["id"]
+    detail = client.get(
+        f"/api/v1/articles/{article_id}", headers=auth_headers
+    ).json()
+    assert detail["source_type"] == "user_import"
+    assert len(detail["sentences"]) == 3
+
+    second = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "article-import-second@example.com",
+            "password": "Strong123!",
+            "nickname": "Second",
+        },
+    )
+    second_headers = {"Authorization": f"Bearer {second.json()['access_token']}"}
+    assert client.get(
+        f"/api/v1/articles/{article_id}", headers=second_headers
+    ).status_code == 404

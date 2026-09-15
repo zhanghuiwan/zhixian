@@ -2,16 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpenText, CalendarDays, LibraryBig, LogOut, Quote, Sparkles } from "@/components/icons";
+import { BookOpenText, CalendarDays, LogOut, Sparkles } from "@/components/icons";
 import { useAuth } from "@/lib/auth-context";
 
 const nav = [
   { href: "/dashboard", label: "AI 对话", icon: Sparkles },
-  { href: "/wordbooks", label: "词书", icon: BookOpenText },
-  { href: "/articles", label: "阅读", icon: LibraryBig },
-  { href: "/sentences", label: "句子", icon: Quote },
+  { href: "/study", label: "学习", icon: BookOpenText },
   { href: "/records", label: "记录", icon: CalendarDays },
 ];
+
+function isActive(pathname: string, href: string) {
+  if (href === "/dashboard") {
+    return pathname === href || pathname.startsWith("/assistant");
+  }
+  if (href === "/study") {
+    return ["/study", "/learn", "/wordbooks", "/vocabulary", "/articles", "/sentences"]
+      .some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  }
+  return pathname === href;
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -30,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
         <nav className="desktop-nav" aria-label="主要导航">
           {nav.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || (href === "/dashboard" && pathname.startsWith("/assistant")) || (href === "/wordbooks" && (pathname.startsWith("/wordbooks/") || pathname.startsWith("/learn") || pathname.startsWith("/vocabulary"))) || (href === "/articles" && pathname.startsWith("/articles/"));
+            const active = isActive(pathname, href);
             return <Link key={href} href={href} className={active ? "active" : ""}><Icon size={20} strokeWidth={1.8} /><span>{label}</span></Link>;
           })}
         </nav>
@@ -42,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="main-content">{children}</main>
       <nav className="mobile-nav" aria-label="移动端主要导航">
         {nav.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href === "/dashboard" && pathname.startsWith("/assistant")) || (href === "/wordbooks" && (pathname.startsWith("/wordbooks/") || pathname.startsWith("/learn") || pathname.startsWith("/vocabulary"))) || (href === "/articles" && pathname.startsWith("/articles/"));
+          const active = isActive(pathname, href);
           return <Link key={href} href={href} className={active ? "active" : ""}><Icon size={21} strokeWidth={1.8} /><span>{label}</span></Link>;
         })}
       </nav>

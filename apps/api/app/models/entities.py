@@ -68,7 +68,15 @@ class AIProviderConfig(Base):
 
 class AIConversation(Base):
     __tablename__ = "ai_conversations"
-    __table_args__ = (Index("ix_ai_conversations_user_updated", "user_id", "updated_at"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "conversation_type",
+            "local_date",
+            name="uq_ai_conversation_user_type_date",
+        ),
+        Index("ix_ai_conversations_user_updated", "user_id", "updated_at"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -76,6 +84,8 @@ class AIConversation(Base):
     provider: Mapped[str] = mapped_column(String(40))
     model: Mapped[str] = mapped_column(String(120))
     summary: Mapped[str] = mapped_column(Text, default="")
+    conversation_type: Mapped[str] = mapped_column(String(20), default="manual")
+    local_date: Mapped[date | None] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

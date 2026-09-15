@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -78,10 +78,28 @@ class AIConversationRead(BaseModel):
     title: str
     provider: ProviderName
     model: str
+    conversation_type: Literal["daily", "manual"] = "manual"
+    local_date: date | None = None
     created_at: datetime
     updated_at: datetime
     archived_at: datetime | None
     message_count: int = 0
+
+
+AIActionType = Literal[
+    "add_word_to_collection",
+    "request_custom_word",
+    "save_sentence",
+    "import_article",
+    "navigate",
+]
+
+
+class AIResponseAction(BaseModel):
+    id: str = Field(min_length=1, max_length=180)
+    type: AIActionType
+    label: str = Field(min_length=1, max_length=80)
+    payload: dict = Field(default_factory=dict)
 
 
 class AIMessageRead(BaseModel):
@@ -94,6 +112,7 @@ class AIMessageRead(BaseModel):
     prompt_tokens: int
     completion_tokens: int
     created_at: datetime
+    actions: list[AIResponseAction] = Field(default_factory=list)
 
 
 class AIChatRequest(BaseModel):

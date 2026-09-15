@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.db.session import SessionLocal
 from app.models import AIConversation, AIMessage, StudyReview, User, Word
 from app.services.ai.providers import ProviderStreamEvent
+from app.services.ai.interaction import build_response_actions, classify_input
 from app.services.ai.tools import execute_tool
 from app.services.learning_insights import get_review_plan, learning_history, local_today
 
@@ -21,6 +22,22 @@ def configure_minimax(client, auth_headers):
         },
     )
     assert response.status_code == 200
+
+
+def completed_payload(response):
+    lines = response.text.splitlines()
+    for index, line in enumerate(lines):
+        if line == "event: message.completed" and index + 1 < len(lines):
+            return json.loads(lines[index + 1].removeprefix("data: "))
+    raise AssertionError("message.completed event not found")
+
+
+def test_english_input_classifier_is_deterministic():
+    assert classify_input("tranquil").kind == "english_word"
+    assert classify_input("The lake is quiet.").kind == "english_sentence"
+    assert classify_input("One sentence. Two sentences. Three sentences.").kind == "english_article"
+    assert classify_input("请翻译 The lake is quiet.").kind == "general"
+    assert classify_input("https://example.com/english").kind == "general"
 
 
 def test_learning_history_plan_and_timezone_boundaries(client, auth_headers):
@@ -154,6 +171,145 @@ def test_agent_stream_persists_conversation_and_messages(
     assert [item["role"] for item in messages] == ["user", "assistant"]
     assert messages[-1]["content"] == "你好，今天也一起学习。"
     assert "minimax-test-secret" not in response.text
+
+
+def test_daily_conversation_reuse_manual_new_and_sentence_action(
+    client, auth_headers, monkeypatch
+):
+    configure_minimax(client, auth_headers)
+
+    class TranslationProvider:
+        async def stream_chat(self, *, messages, tools=None):
+            assert "默认任务是准确、自然地翻译成中文" in messages[1]["content"]
+            yield ProviderStreamEvent(kind="text", content="湖面很平静。")
+            yield ProviderStreamEvent(kind="finish", finish_reason="stop")
+
+    monkeypatch.setattr(
+        "app.services.ai.agent.build_provider",
+        lambda *_, **__: TranslationProvider(),
+    )
+    first = client.post(
+        "/api/v1/ai/chat/stream",
+        headers=auth_headers,
+        json={"message": "The lake is tranquil.", "provider": "minimax"},
+    )
+    second = client.post(
+        "/api/v1/ai/chat/stream",
+        headers=auth_headers,
+        json={"message": "The path is quiet."},
+    )
+    first_payload = completed_payload(first)
+    second_payload = completed_payload(second)
+    assert first_payload["actions"][0]["type"] == "save_sentence"
+    assert second_payload["actions"][0]["type"] == "save_sentence"
+
+    conversations = client.get(
+        "/api/v1/ai/conversations", headers=auth_headers
+    ).json()
+    assert len(conversations) == 1
+    assert conversations[0]["conversation_type"] == "daily"
+    assert conversations[0]["local_date"]
+    today = client.get(
+        "/api/v1/ai/conversations/today", headers=auth_headers
+    ).json()
+    assert today["id"] == conversations[0]["id"]
+    messages = client.get(
+        f"/api/v1/ai/conversations/{today['id']}/messages",
+        headers=auth_headers,
+    ).json()
+    assert len(messages) == 4
+    assert messages[-1]["actions"][0]["type"] == "save_sentence"
+
+    manual = client.post(
+        "/api/v1/ai/conversations",
+        headers=auth_headers,
+        json={"title": "专项练习"},
+    ).json()
+    assert manual["conversation_type"] == "manual"
+    assert manual["local_date"] is None
+    assert manual["id"] != today["id"]
+
+    archived = client.patch(
+        f"/api/v1/ai/conversations/{today['id']}",
+        headers=auth_headers,
+        json={"archived": True},
+    )
+    assert archived.status_code == 200
+    assert client.get(
+        "/api/v1/ai/conversations/today", headers=auth_headers
+    ).json() is None
+    resumed = client.post(
+        "/api/v1/ai/chat/stream",
+        headers=auth_headers,
+        json={"message": "The water is clear."},
+    )
+    assert completed_payload(resumed)["actions"][0]["type"] == "save_sentence"
+    assert client.get(
+        "/api/v1/ai/conversations/today", headers=auth_headers
+    ).json()["id"] == today["id"]
+
+
+def test_word_lookup_returns_collection_actions(client, auth_headers, monkeypatch):
+    configure_minimax(client, auth_headers)
+
+    class WordProvider:
+        calls = 0
+
+        async def stream_chat(self, *, messages, tools=None):
+            self.calls += 1
+            if self.calls == 1:
+                yield ProviderStreamEvent(
+                    kind="tool_call",
+                    tool_call_index=0,
+                    tool_call_id="lookup-wander",
+                    tool_name="lookup_word",
+                    tool_arguments=json.dumps({"term": "wander"}),
+                )
+                yield ProviderStreamEvent(kind="finish", finish_reason="tool_calls")
+                return
+            yield ProviderStreamEvent(kind="text", content="**wander**：漫步。")
+            yield ProviderStreamEvent(kind="finish", finish_reason="stop")
+
+    provider = WordProvider()
+    monkeypatch.setattr(
+        "app.services.ai.agent.build_provider", lambda *_, **__: provider
+    )
+    response = client.post(
+        "/api/v1/ai/chat/stream",
+        headers=auth_headers,
+        json={"message": "wander", "provider": "minimax"},
+    )
+    payload = completed_payload(response)
+    assert payload["actions"][0]["type"] == "add_word_to_collection"
+    assert payload["actions"][0]["label"] == "加入默认生词本"
+    assert payload["actions"][0]["payload"]["term"] == "wander"
+
+
+def test_missing_word_returns_custom_word_action(client):
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.email == "learner@example.com"))
+        actions = build_response_actions(
+            db,
+            user=user,
+            conversation_id=1,
+            user_message="moonbow",
+            assistant_content="**moonbow**：月虹。",
+            tool_results=[
+                {
+                    "tool_name": "lookup_word",
+                    "ok": True,
+                    "data": {"found": False, "term": "moonbow"},
+                }
+            ],
+        )
+    assert actions == [
+        {
+            "id": "custom-word:moonbow",
+            "type": "request_custom_word",
+            "label": "加入我的新增单词",
+            "payload": {"term": "moonbow"},
+        }
+    ]
 
 
 def test_destructive_agent_tool_waits_for_exact_confirmation(

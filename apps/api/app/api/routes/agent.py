@@ -21,6 +21,8 @@ from app.schemas.ai import (
 from app.services.ai.agent import (
     AgentConfigurationError,
     create_conversation,
+    find_daily_conversation,
+    get_or_create_daily_conversation,
     run_agent,
     selected_provider_config,
     sse,
@@ -28,6 +30,39 @@ from app.services.ai.agent import (
 from app.services.ai.tools import ToolExecutionError, execute_tool
 
 router = APIRouter(prefix="/ai", tags=["AI 学习助手"])
+
+
+def _conversation_read(
+    conversation: AIConversation, message_count: int = 0
+) -> AIConversationRead:
+    return AIConversationRead(
+        id=conversation.id,
+        title=conversation.title,
+        provider=conversation.provider,
+        model=conversation.model,
+        conversation_type=conversation.conversation_type,
+        local_date=conversation.local_date,
+        created_at=conversation.created_at,
+        updated_at=conversation.updated_at,
+        archived_at=conversation.archived_at,
+        message_count=message_count,
+    )
+
+
+def _message_read(message: AIMessage) -> AIMessageRead:
+    metadata = message.provider_metadata or {}
+    actions = metadata.get("actions")
+    return AIMessageRead(
+        id=message.id,
+        role=message.role,
+        content=message.content,
+        tool_call_id=message.tool_call_id,
+        tool_calls=message.tool_calls,
+        prompt_tokens=message.prompt_tokens,
+        completion_tokens=message.completion_tokens,
+        created_at=message.created_at,
+        actions=actions if isinstance(actions, list) else [],
+    )
 
 
 def _owned_conversation(
@@ -58,19 +93,26 @@ def list_conversations(
         .group_by(AIConversation.id)
         .order_by(AIConversation.updated_at.desc())
     ).all()
-    return [
-        AIConversationRead(
-            id=item.id,
-            title=item.title,
-            provider=item.provider,
-            model=item.model,
-            created_at=item.created_at,
-            updated_at=item.updated_at,
-            archived_at=item.archived_at,
-            message_count=count,
+    return [_conversation_read(item, count) for item, count in rows]
+
+
+@router.get(
+    "/conversations/today",
+    response_model=AIConversationRead | None,
+)
+def today_conversation(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    conversation = find_daily_conversation(db, user=current_user)
+    if conversation is None:
+        return None
+    count = db.scalar(
+        select(func.count(AIMessage.id)).where(
+            AIMessage.conversation_id == conversation.id
         )
-        for item, count in rows
-    ]
+    )
+    return _conversation_read(conversation, count or 0)
 
 
 @router.post(
@@ -92,16 +134,7 @@ def new_conversation(
         )
     except AgentConfigurationError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return AIConversationRead(
-        id=conversation.id,
-        title=conversation.title,
-        provider=conversation.provider,
-        model=conversation.model,
-        created_at=conversation.created_at,
-        updated_at=conversation.updated_at,
-        archived_at=conversation.archived_at,
-        message_count=0,
-    )
+    return _conversation_read(conversation)
 
 
 @router.get(
@@ -116,11 +149,12 @@ def conversation_messages(
     conversation = _owned_conversation(
         db, user_id=current_user.id, conversation_id=conversation_id
     )
-    return db.scalars(
+    messages = db.scalars(
         select(AIMessage)
         .where(AIMessage.conversation_id == conversation.id)
         .order_by(AIMessage.id)
     ).all()
+    return [_message_read(message) for message in messages]
 
 
 @router.get(
@@ -167,16 +201,7 @@ def update_conversation(
             AIMessage.conversation_id == conversation.id
         )
     )
-    return AIConversationRead(
-        id=conversation.id,
-        title=conversation.title,
-        provider=conversation.provider,
-        model=conversation.model,
-        created_at=conversation.created_at,
-        updated_at=conversation.updated_at,
-        archived_at=conversation.archived_at,
-        message_count=count or 0,
-    )
+    return _conversation_read(conversation, count or 0)
 
 
 @router.delete(
@@ -211,11 +236,8 @@ def chat_stream(
             raise HTTPException(status_code=409, detail="同一对话不能中途切换模型厂商")
     else:
         try:
-            conversation = create_conversation(
-                db,
-                user_id=current_user.id,
-                title=payload.message[:24],
-                provider=payload.provider,
+            conversation = get_or_create_daily_conversation(
+                db, user=current_user, provider=payload.provider
             )
         except AgentConfigurationError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -245,7 +267,10 @@ def chat_stream(
                 yield sse("error", {"message": "对话不存在或已失效"})
                 return
             async for event in run_agent(
-                stream_db, user=stream_user, conversation=stream_conversation
+                stream_db,
+                user=stream_user,
+                conversation=stream_conversation,
+                user_message=payload.message,
             ):
                 yield event
 

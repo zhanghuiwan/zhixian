@@ -14,12 +14,14 @@ import {
   X,
 } from "@/components/icons";
 import { ApiError, api, streamApi, type SSEMessage } from "@/lib/api";
-import type { AIConversation, AIMessage, AIToolRun } from "@/lib/types";
+import { MarkdownMessage } from "@/components/markdown-message";
+import type { AIConversation, AIMessage, AIResponseAction, AIToolRun, Article } from "@/lib/types";
 
 type DisplayMessage = {
   key: string;
   role: "user" | "assistant";
   content: string;
+  actions?: AIResponseAction[];
 };
 
 type ToolCard = {
@@ -54,6 +56,40 @@ function isTransientCard(card: ToolCard) {
   return card.toolName ? transientToolNames.has(card.toolName) : false;
 }
 
+const actionTypes = new Set([
+  "add_word_to_collection",
+  "request_custom_word",
+  "save_sentence",
+  "import_article",
+  "navigate",
+]);
+
+function parseActions(value: unknown): AIResponseAction[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is AIResponseAction => {
+    if (!item || typeof item !== "object") return false;
+    const action = item as Record<string, unknown>;
+    return typeof action.id === "string"
+      && typeof action.type === "string"
+      && actionTypes.has(action.type)
+      && typeof action.label === "string"
+      && !!action.payload
+      && typeof action.payload === "object";
+  });
+}
+
+function payloadString(payload: Record<string, unknown>, key: string) {
+  const value = payload[key];
+  if (typeof value !== "string" || !value.trim()) throw new Error("操作参数无效");
+  return value;
+}
+
+function payloadNumber(payload: Record<string, unknown>, key: string) {
+  const value = Number(payload[key]);
+  if (!Number.isInteger(value) || value < 1) throw new Error("操作参数无效");
+  return value;
+}
+
 export default function AssistantPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState<AIConversation[]>([]);
@@ -64,12 +100,15 @@ export default function AssistantPage() {
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [actionStates, setActionStates] = useState<Record<string, "pending" | "done">>({});
   const abortRef = useRef<AbortController | null>(null);
   const initialPromptHandled = useRef(false);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   const loadConversations = useCallback(async () => {
-    setConversations(await api<AIConversation[]>("/ai/conversations"));
+    const data = await api<AIConversation[]>("/ai/conversations");
+    setConversations(data);
+    return data;
   }, []);
 
   const openConversation = useCallback(async (id: number) => {
@@ -82,6 +121,7 @@ export default function AssistantPage() {
       key: `message-${item.id}`,
       role: item.role as "user" | "assistant",
       content: item.content,
+      actions: item.actions,
     })));
     setCards(toolRuns.filter((item) => (
       item.status === "pending_confirmation" || !transientToolNames.has(item.tool_name)
@@ -104,7 +144,18 @@ export default function AssistantPage() {
     setDrawerOpen(false);
   }, []);
 
-  useEffect(() => { loadConversations().catch(() => undefined); }, [loadConversations]);
+  useEffect(() => {
+    let cancelled = false;
+    async function restore() {
+      await loadConversations();
+      const prompt = new URL(window.location.href).searchParams.get("message");
+      if (prompt) return;
+      const today = await api<AIConversation | null>("/ai/conversations/today");
+      if (!cancelled && today) await openConversation(today.id);
+    }
+    restore().catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [loadConversations, openConversation]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, cards]);
 
   const handleStreamEvent = useCallback((message: SSEMessage) => {
@@ -143,7 +194,8 @@ export default function AssistantPage() {
         : pageRoutes[page];
       if (destination) router.push(destination);
     } else if (message.event === "message.completed") {
-      setMessages((current) => current.map((item) => item.key === "streaming" ? { ...item, key: `message-${String(data.message_id)}` } : item));
+      const actions = parseActions(data.actions);
+      setMessages((current) => current.map((item) => item.key === "streaming" ? { ...item, key: `message-${String(data.message_id)}`, actions } : item));
       setCards((current) => current.filter((item) => !isTransientCard(item)));
     } else if (message.event === "error") {
       setError(String(data.message || "本次请求未能完成"));
@@ -207,6 +259,55 @@ export default function AssistantPage() {
     await loadConversations();
   }
 
+  async function performAction(messageKey: string, action: AIResponseAction) {
+    const stateKey = `${messageKey}:${action.id}`;
+    if (actionStates[stateKey] === "pending" || actionStates[stateKey] === "done") return;
+    setActionStates((current) => ({ ...current, [stateKey]: "pending" }));
+    try {
+      if (action.type === "add_word_to_collection") {
+        const collectionId = payloadNumber(action.payload, "collection_id");
+        const term = payloadString(action.payload, "term");
+        await api(`/library/personal/${collectionId}/words`, {
+          method: "POST",
+          body: JSON.stringify({ terms: [term] }),
+        });
+      } else if (action.type === "request_custom_word") {
+        const term = payloadString(action.payload, "term");
+        await send(`请将单词 ${term} 加入我的新增单词，并加入默认生词本。`);
+      } else if (action.type === "save_sentence") {
+        await api("/sentences", {
+          method: "POST",
+          body: JSON.stringify({
+            text: payloadString(action.payload, "text"),
+            translation: payloadString(action.payload, "translation"),
+            conversation_id: payloadNumber(action.payload, "conversation_id"),
+          }),
+        });
+      } else if (action.type === "import_article") {
+        const article = await api<Article>("/articles/import-text", {
+          method: "POST",
+          body: JSON.stringify({
+            content: payloadString(action.payload, "content"),
+            title: payloadString(action.payload, "title"),
+          }),
+        });
+        router.push(`/articles/${article.id}`);
+      } else if (action.type === "navigate") {
+        const path = payloadString(action.payload, "path");
+        if (path === "/learn" || /^\/articles\/\d+$/.test(path)) router.push(path);
+        else throw new Error("不支持的页面操作");
+      }
+      setActionStates((current) => ({ ...current, [stateKey]: "done" }));
+    } catch (cause) {
+      setActionStates((current) => {
+        const next = { ...current };
+        delete next[stateKey];
+        return next;
+      });
+      setError(cause instanceof ApiError || cause instanceof Error ? cause.message : "操作失败，请重试");
+    }
+  }
+
   async function removeConversation(id: number) {
     await api(`/ai/conversations/${id}`, { method: "DELETE" });
     if (activeId === id) {
@@ -217,13 +318,22 @@ export default function AssistantPage() {
     await loadConversations();
   }
 
-  function freshConversation() {
+  async function freshConversation() {
     abortRef.current?.abort();
-    setActiveId(null);
-    setMessages([]);
-    setCards([]);
-    setError("");
-    setDrawerOpen(false);
+    try {
+      const conversation = await api<AIConversation>("/ai/conversations", {
+        method: "POST",
+        body: JSON.stringify({ title: "新对话" }),
+      });
+      setActiveId(conversation.id);
+      setMessages([]);
+      setCards([]);
+      setError("");
+      setDrawerOpen(false);
+      await loadConversations();
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "无法新建对话");
+    }
   }
 
   return (
@@ -231,7 +341,7 @@ export default function AssistantPage() {
       <aside className={`assistant-history ${drawerOpen ? "open" : ""}`} aria-hidden={!drawerOpen}>
         <div className="assistant-history-head">
           <strong>对话记录</strong>
-          <button onClick={freshConversation}><MessageSquarePlus size={18} />新对话</button>
+          <button onClick={() => void freshConversation()}><MessageSquarePlus size={18} />新对话</button>
         </div>
         <div className="conversation-list">
           {conversations.map((item) => (
@@ -269,7 +379,28 @@ export default function AssistantPage() {
           {messages.map((message) => (
             <article className={`chat-message ${message.role}`} key={message.key}>
               <span>{message.role === "assistant" ? "知" : "我"}</span>
-              <div>{message.content || (streaming ? <i className="typing-dot">思考中…</i> : null)}</div>
+              <div>
+                {message.role === "assistant"
+                  ? <MarkdownMessage content={message.content} />
+                  : message.content}
+                {!message.content && streaming ? <i className="typing-dot">思考中…</i> : null}
+                {!!message.actions?.length && (
+                  <div className="response-actions" aria-label="快捷操作">
+                    {message.actions.map((action) => {
+                      const state = actionStates[`${message.key}:${action.id}`];
+                      return (
+                        <button
+                          key={action.id}
+                          disabled={state === "pending" || state === "done" || streaming}
+                          onClick={() => void performAction(message.key, action)}
+                        >
+                          {state === "pending" ? "处理中…" : state === "done" ? "已完成" : action.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </article>
           ))}
           {cards.map((card) => (

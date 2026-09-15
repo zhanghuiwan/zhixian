@@ -7,8 +7,8 @@ from app.api.deps import bearer_scheme, get_current_user
 from app.db.session import get_db
 from app.models import Article, ArticleSentence, ReadingProgress, SentenceBookmark, User, Word
 from app.schemas import ArticleDetail, ArticleListItem, BookmarkRead, WordRead
-from app.schemas.workspace import BookmarkCreate, BookmarkPage, BookmarkUpdate, ReadingResult, ReadingUpdate
-from app.services.reading import ReadingError, article_detail, article_summary, bookmark_read, create_bookmark, owned_article, save_reading, visible_articles
+from app.schemas.workspace import ArticleImportCreate, BookmarkCreate, BookmarkPage, BookmarkUpdate, ReadingResult, ReadingUpdate
+from app.services.reading import ReadingError, article_detail, article_summary, bookmark_read, create_bookmark, import_article_text, owned_article, save_reading, visible_articles
 from app.services.custom_words import visible_word_clause
 
 router = APIRouter(tags=["文章与句子"])
@@ -23,6 +23,18 @@ def list_articles(user: User | None = Depends(optional_user), db: Session = Depe
     articles = db.scalars(select(Article).where(visible_articles(user)).order_by(Article.created_at.desc(), Article.id.desc())).all()
     progress = {p.article_id: p for p in db.scalars(select(ReadingProgress).where(ReadingProgress.user_id == user.id)).all()} if user else {}
     return [article_summary(a, progress.get(a.id)) for a in articles]
+
+
+@router.post("/articles/import-text", response_model=ArticleListItem, status_code=201)
+def import_text_article(
+    payload: ArticleImportCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return article_summary(import_article_text(db, user, payload))
+    except ReadingError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/articles/bookmarks", response_model=list[BookmarkRead])
