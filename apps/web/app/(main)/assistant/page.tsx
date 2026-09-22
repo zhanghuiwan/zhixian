@@ -103,7 +103,32 @@ export default function AssistantPage() {
   const [actionStates, setActionStates] = useState<Record<string, "pending" | "done">>({});
   const abortRef = useRef<AbortController | null>(null);
   const initialPromptHandled = useRef(false);
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const messagesRef = useRef<HTMLDivElement | null>(null);
+  const streamingMessageRef = useRef<HTMLElement | null>(null);
+  const streamingMessageStartedRef = useRef(false);
+
+  const scrollMessagesToEnd = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      const container = messagesRef.current;
+      if (container) container.scrollTop = container.scrollHeight;
+    });
+  }, []);
+
+  const revealStreamingStart = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      const container = messagesRef.current;
+      const message = streamingMessageRef.current;
+      if (!container || !message) return;
+      const distance = message.getBoundingClientRect().top
+        - container.getBoundingClientRect().top;
+      if (distance > 0) {
+        container.scrollBy({
+          top: Math.min(distance, container.clientHeight),
+          behavior: "smooth",
+        });
+      }
+    });
+  }, []);
 
   const loadConversations = useCallback(async () => {
     const data = await api<AIConversation[]>("/ai/conversations");
@@ -142,7 +167,8 @@ export default function AssistantPage() {
       status: item.status,
     })));
     setDrawerOpen(false);
-  }, []);
+    scrollMessagesToEnd();
+  }, [scrollMessagesToEnd]);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,7 +182,6 @@ export default function AssistantPage() {
     restore().catch(() => undefined);
     return () => { cancelled = true; };
   }, [loadConversations, openConversation]);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, cards]);
 
   const handleStreamEvent = useCallback((message: SSEMessage) => {
     const data = message.data;
@@ -164,6 +189,8 @@ export default function AssistantPage() {
       setActiveId(Number(data.conversation_id));
     } else if (message.event === "message.delta") {
       const delta = String(data.content || "");
+      const shouldRevealStart = !streamingMessageStartedRef.current;
+      streamingMessageStartedRef.current = true;
       setMessages((current) => {
         const last = current.at(-1);
         if (last?.role === "assistant" && last.key === "streaming") {
@@ -171,6 +198,7 @@ export default function AssistantPage() {
         }
         return [...current, { key: "streaming", role: "assistant", content: delta }];
       });
+      if (shouldRevealStart) revealStreamingStart();
     } else if (["tool.started", "tool.completed", "tool.failed", "confirmation.required"].includes(message.event)) {
       const toolRunId = Number(data.tool_run_id);
       setCards((current) => {
@@ -201,13 +229,14 @@ export default function AssistantPage() {
       setError(String(data.message || "本次请求未能完成"));
       setCards((current) => current.filter((item) => !isTransientCard(item)));
     }
-  }, [router]);
+  }, [revealStreamingStart, router]);
 
   const send = useCallback(async (text: string) => {
     const cleaned = text.trim();
     if (!cleaned || streaming) return;
     setError("");
     setInput("");
+    streamingMessageStartedRef.current = false;
     setCards((current) => current.filter((item) => !isTransientCard(item)));
     setMessages((current) => [...current, { key: `user-${Date.now()}`, role: "user", content: cleaned }]);
     setStreaming(true);
@@ -329,6 +358,7 @@ export default function AssistantPage() {
       setMessages([]);
       setCards([]);
       setError("");
+      streamingMessageStartedRef.current = false;
       setDrawerOpen(false);
       await loadConversations();
     } catch (cause) {
@@ -365,7 +395,7 @@ export default function AssistantPage() {
           <Link href="/profile">模型设置</Link>
         </header>
 
-        <div className="assistant-messages">
+        <div className="assistant-messages" ref={messagesRef}>
           {!messages.length && !cards.length && (
             <div className="assistant-welcome">
               <span><Sparkles size={27} /></span>
@@ -377,7 +407,11 @@ export default function AssistantPage() {
             </div>
           )}
           {messages.map((message) => (
-            <article className={`chat-message ${message.role}`} key={message.key}>
+            <article
+              className={`chat-message ${message.role}`}
+              key={message.key}
+              ref={message.key === "streaming" ? streamingMessageRef : undefined}
+            >
               <span>{message.role === "assistant" ? "知" : "我"}</span>
               <div>
                 {message.role === "assistant"
@@ -413,7 +447,6 @@ export default function AssistantPage() {
             </article>
           ))}
           {error && <div className="assistant-error"><span>{error}</span>{error.includes("配置") && <Link href="/profile">前往设置</Link>}</div>}
-          <div ref={endRef} />
         </div>
 
         <form className="assistant-composer" onSubmit={submit}>
