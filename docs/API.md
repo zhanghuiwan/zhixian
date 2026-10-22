@@ -52,8 +52,12 @@
 - `POST /library/personal/{id}/words`：按词典 term 批量加入个人词书。
 - `DELETE /library/personal/{id}/words/{word_id}`：只移出该个人词书。
 - `GET /study/queue?limit=20&mode=all&kind=system&source_id=1`：先返回所选范围内到期复习，再按用户每日新词上限补充新词；`mode` 支持 `all|new|review`，`limit` 范围 1～50。
+- `GET /study/queue?mode=new`：仅从显式词书或用户当前词书选择未学词，不再混入范围外个人收藏；普通新学仍遵守每日目标。
+- `GET /study/queue?next_group=true&limit=10`：明确继续新学，不受每日剩余新词目标限制；即使传mode=review也按新学处理。显式kind/source_id优先，否则由后端读取当前系统/个人词书。只返回该用户尚无last_reviewed_at的词，按词书顺序取最多limit个；已提交学习过的词不再作为新词返回。无当前词书409，不存在或他人词书404，未登录401。
 - `POST /study/sessions/complete`：提交已全部通过的一组学习记录。请求包含 8～64 字符客户端 `session_id`、来源、起止/用时、轮数，以及每个词的 0–100 分数序列、答题方式、轮次、响应时间和是否查看答案。服务端按当前用户验证所有词与词书来源，并在单个事务中写入会话、逐词统计、当前进度和计划完成状态；相同内容可安全重试，不同内容复用同一会话 ID 返回 409。
 - `POST /study/reviews`：旧单次评分兼容接口；客户端应传 8～64 字符 `request_id`，相同用户的网络重试返回首次结果，不重复计分。当前 Web 学习页不再使用该接口。
+
+新学队列额外返回可空的`source_kind`、`source_id`、`source_name`、`remaining_new_count`和`empty_reason`；普通混合/复习队列可为空值。`new_count`是本次返回的新词数，`remaining_new_count`是取组时范围内尚未学过的总数（包含本组）。空原因：`book_completed`仅在未学总数为0时返回；`daily_goal_reached`表示还有未学词但今日目标已完成；普通新学未选词书为`no_selected_book`。非空队列的empty_reason为null。客户端不能把所有空队列均解释为词书已学完；显式继续需要支持新契约的API，旧服务端不会支持该能力。
 
 当前 Web 快捷熟悉度为“不记得 0、模糊 50、熟悉 90”，滑杆允许 0–100；最终分低于 80 的词不能提交整组。复习间隔不在学习页显示，服务端根据完整组内轨迹更新进度。旧接口的 `again|hard|good|easy` 枚举仅为兼容保留。
 

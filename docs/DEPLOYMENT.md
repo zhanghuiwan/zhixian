@@ -115,6 +115,28 @@ bash scripts/deploy-production.sh
 
 不要运行 `docker compose down -v`、`docker volume rm zhixian_postgres_data` 或更改 Compose 项目名；这些操作会删除或脱离现有数据库卷。普通的 `docker compose up -d --build`、容器重建和 `docker compose down` 会保留命名卷。
 
+## 仅更新后端
+
+当发布差异仅含API代码与相关文档、未修改Web和Compose时，可以保留现有Web镜像，仅重建API。2026-10-22“再学一组”修复属于此类：没有数据库模型或迁移变化，迁移head仍为0008。
+
+仍须先通过测试、合并到GitHub main，再让服务器拉取对应提交。发布前记录服务器当前SHA、API镜像和数据库容器／卷身份，确认工作树干净。先在受限备份目录创建并验证数据库压缩备份及上传文件备份，再快进到已核验SHA；不要清理已有备份或重建数据库服务。
+
+在服务器上、备份与SHA核对完成后执行：
+
+```bash
+cd /opt/zhixian
+git pull --ff-only origin main
+docker compose build api
+docker compose up -d --no-deps --wait api
+docker compose exec -T nginx nginx -t
+docker compose exec -T nginx nginx -s reload
+curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/health
+docker compose exec -T api alembic current
+docker compose ps
+```
+
+Nginx使用静态服务名上游，API容器更换后重载以重新解析地址。发布后核对HTTPS健康接口、OpenAPI的`next_group`参数及新增队列字段，确认原数据库容器和卷未变；不为验证而向真实用户写评分。旧API镜像应保留作代码回退。若未来版本包含迁移，应单独评估迁移与回退，不能沿用本次无迁移结论。
+
 ## 自动备份
 
 手动备份：

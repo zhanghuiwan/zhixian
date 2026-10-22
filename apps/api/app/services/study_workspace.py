@@ -61,7 +61,59 @@ def intervals(progress: UserWordProgress | None) -> dict[str, str]:
     return result
 
 
-def queue(db: Session, user: User, mode: str, kind: str | None, source_id: int | None, limit: int) -> StudyQueueResponse:
+def _new_word_queue(
+    db: Session,
+    user: User,
+    kind: str | None,
+    source_id: int | None,
+    limit: int,
+    next_group: bool,
+) -> StudyQueueResponse:
+    if kind is None:
+        kind, source_id = current_source(user)
+    if kind is None:
+        if next_group:
+            raise StudyError("请先选择词书")
+        return StudyQueueResponse(
+            items=[], due_count=0, new_count=0, empty_reason="no_selected_book"
+        )
+    source, ids = source_words(db, user, kind, source_id)
+    learned = select(UserWordProgress.word_id).where(
+        UserWordProgress.user_id == user.id,
+        UserWordProgress.last_reviewed_at.is_not(None),
+    )
+    statement = select(Word).where(Word.id.in_(ids), Word.id.not_in(learned))
+    remaining = db.scalar(select(func.count()).select_from(statement.subquery())) or 0
+    # The daily target limits the normal task, not an explicitly requested extra group.
+    budget = limit if next_group else min(limit, remaining_new(db, user))
+    if kind == "system":
+        statement = statement.join(
+            WordbookWord,
+            (WordbookWord.word_id == Word.id) & (WordbookWord.wordbook_id == source_id),
+        ).order_by(WordbookWord.position, Word.id)
+    else:
+        statement = statement.order_by(Word.id)
+    words = db.scalars(statement.limit(budget)).all() if budget else []
+    items = [StudyQueueItem(
+        word=word, mode="new", repetitions=0, mastery_score=0,
+        source_kind=kind, source_id=source_id, source_name=source.name,
+        intervals=intervals(None),
+    ) for word in words]
+    reason = None
+    if not remaining:
+        reason = "book_completed"
+    elif not budget:
+        reason = "daily_goal_reached"
+    return StudyQueueResponse(
+        items=items, due_count=0, new_count=len(items), source_kind=kind,
+        source_id=source_id, source_name=source.name,
+        remaining_new_count=remaining, empty_reason=reason,
+    )
+
+
+def queue(db: Session, user: User, mode: str, kind: str | None, source_id: int | None, limit: int, next_group: bool = False) -> StudyQueueResponse:
+    if mode == "new" or next_group:
+        return _new_word_queue(db, user, kind, source_id, limit, next_group)
     now = utc_now()
     explicit = kind is not None
     ids = None

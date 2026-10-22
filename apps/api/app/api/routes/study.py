@@ -20,11 +20,21 @@ router = APIRouter(prefix="/study", tags=["学习"])
 
 
 @router.get("/queue", response_model=StudyQueueResponse)
-def get_study_queue(limit: int = Query(20, ge=1, le=50), mode: Literal["all", "new", "review"] = "all", kind: Literal["system", "personal"] | None = None, source_id: int | None = Query(None, ge=1), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_study_queue(
+    limit: int = Query(20, ge=1, le=50),
+    mode: Literal["all", "new", "review"] = "all",
+    kind: Literal["system", "personal"] | None = None,
+    source_id: int | None = Query(None, ge=1),
+    next_group: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        return queue(db, current_user, mode, kind, source_id, limit)
+        return queue(db, current_user, mode, kind, source_id, limit, next_group=next_group)
     except VocabularyCollectionError as exc:
         raise HTTPException(404, str(exc)) from exc
+    except StudyError as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @router.post("/reviews", response_model=ReviewResult)

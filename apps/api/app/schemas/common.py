@@ -122,6 +122,11 @@ class StudyQueueResponse(BaseModel):
     items: list[StudyQueueItem]
     due_count: int
     new_count: int
+    source_kind: Literal["system", "personal"] | None = None
+    source_id: int | None = None
+    source_name: str | None = None
+    remaining_new_count: int | None = None
+    empty_reason: Literal["book_completed", "daily_goal_reached", "no_selected_book"] | None = None
 
 
 class ReviewCreate(BaseModel):
