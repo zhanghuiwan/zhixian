@@ -1,0 +1,281 @@
+{
+  "approved_identity": {
+    "source_path": "/Users/tom/Documents/知闲/assets/wutong/source/reference/approved-unified-canopy-v2/approved-front-side-top.png",
+    "sha256": "fab69a5c590a9bdbbe5a8a79af4f363beec8fbb28bcb0399d2249744b710e157"
+  },
+  "schema_version": 1,
+  "date": "2026-10-29",
+  "platform": "Android / Expo React Native",
+  "status": "implemented-static-extension-pending-user-review",
+  "master_identity_status": "user-approved identity; new action PNGs not individually approved",
+  "mode": "built-in image_gen; idle is deterministic neutral derivative",
+  "animation_boundary": "Static action PNGs. Runtime transform and opacity animations are application code. No Rive, rig, frame-by-frame limb animation or lip sync.",
+  "canvas": {
+    "width": 768,
+    "height": 768,
+    "preferred_character_height": 600,
+    "foot_baseline": 696,
+    "alpha_bounds_threshold": 32
+  },
+  "assets": [
+    {
+      "id": "stretch",
+      "file": "stretch.png",
+      "width": 768,
+      "height": 768,
+      "bytes": 483010,
+      "sha256": "c8bb3ebd3e790d7b867024cb2c529129267f56913fcfff66cacf05cb6f21911c",
+      "source_path": "/Users/tom/.codex/generated_images/01a18840-6918-78a2-88da-3f9f328d7c35/exec-0b38d0f0-c184-41bb-b3e1-801061da34f5.png",
+      "source_sha256": "064d99b7f20cb9e9f54523a452f6c26371e64473518700cc42ef828162687577",
+      "source_dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "source_alpha_bounds": {
+        "left": 80,
+        "top": 118,
+        "width": 1095,
+        "height": 1006
+      },
+      "output_alpha_bounds": {
+        "left": 58,
+        "top": 97,
+        "width": 651,
+        "height": 598
+      },
+      "mechanical_preparation": "alpha >= 32 bounding box + 2 px safety crop, aspect-preserving downscale, transparent 768 square, bottom-aligned at y=696; no painting or alpha recoloring",
+      "identity_qa": {
+        "continuous_green_canopy": true,
+        "direct_three_lobed_leaf_palms": true,
+        "exactly_two_feet": true,
+        "no_tail": true,
+        "no_text": true,
+        "full_body_uncropped": true,
+        "visual_review": "pass"
+      },
+      "notes": "Distinct generated static pose; not an animation frame."
+    },
+    {
+      "id": "idle",
+      "file": "idle.png",
+      "width": 768,
+      "height": 768,
+      "bytes": 484256,
+      "sha256": "8301922d5a7448f908e5f49156ae1addd4aa9a3b85973c61e40ec19970e6377b",
+      "source_path": "/Users/tom/.cache/zhixian-home-20261029/apps/mobile/assets/xianxian/neutral.png",
+      "source_sha256": "174c4787f742ba972b56ba68e8c3f835911c673a57490075a60b15e417a86d39",
+      "source_dimensions": {
+        "width": 1374,
+        "height": 1145
+      },
+      "source_alpha_bounds": {
+        "left": 124,
+        "top": 59,
+        "width": 1128,
+        "height": 1033
+      },
+      "output_alpha_bounds": {
+        "left": 57,
+        "top": 97,
+        "width": 653,
+        "height": 598
+      },
+      "mechanical_preparation": "alpha >= 32 bounding box + 2 px safety crop, aspect-preserving downscale, transparent 768 square, bottom-aligned at y=696; no painting or alpha recoloring",
+      "identity_qa": {
+        "continuous_green_canopy": true,
+        "direct_three_lobed_leaf_palms": true,
+        "exactly_two_feet": true,
+        "no_tail": true,
+        "no_text": true,
+        "full_body_uncropped": true,
+        "visual_review": "pass"
+      },
+      "notes": "Existing neutral preserved; this file is only normalized canvas derivative."
+    },
+    {
+      "id": "wave",
+      "file": "wave.png",
+      "width": 768,
+      "height": 768,
+      "bytes": 492363,
+      "sha256": "63f3bec4ec93fefdc1b9f29b7717a7d32fc9be1de7f44036092cfe6a88c460f4",
+      "source_path": "/Users/tom/.codex/generated_images/01a18840-6918-78a2-88da-3f9f328d7c35/exec-f7cdaa01-86df-485c-8444-4fa1d90092c3.png",
+      "source_sha256": "07bddbba6d3413a42335cd3377779da0d3f6e5eb607dbc41ec6b92dd93d1fcd2",
+      "source_dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "source_alpha_bounds": {
+        "left": 56,
+        "top": 110,
+        "width": 1147,
+        "height": 1031
+      },
+      "output_alpha_bounds": {
+        "left": 51,
+        "top": 97,
+        "width": 665,
+        "height": 598
+      },
+      "mechanical_preparation": "alpha >= 32 bounding box + 2 px safety crop, aspect-preserving downscale, transparent 768 square, bottom-aligned at y=696; no painting or alpha recoloring",
+      "identity_qa": {
+        "continuous_green_canopy": true,
+        "direct_three_lobed_leaf_palms": true,
+        "exactly_two_feet": true,
+        "no_tail": true,
+        "no_text": true,
+        "full_body_uncropped": true,
+        "visual_review": "pass"
+      },
+      "notes": "Distinct generated static pose; not an animation frame."
+    },
+    {
+      "id": "read",
+      "file": "read.png",
+      "width": 768,
+      "height": 768,
+      "bytes": 442218,
+      "sha256": "e66222c5d5c2ee7c019ba9982d3b7a306acceade649f9a3cd31371e7dec2c3ce",
+      "source_path": "/Users/tom/.codex/generated_images/01a18840-6918-78a2-88da-3f9f328d7c35/exec-0073ce9b-e3e4-4182-903d-231d07f6123d.png",
+      "source_sha256": "a28fafd628eac59b71816ccf5662e4a2301357cea76de057abf9438e69545767",
+      "source_dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "source_alpha_bounds": {
+        "left": 75,
+        "top": 108,
+        "width": 1104,
+        "height": 1027
+      },
+      "output_alpha_bounds": {
+        "left": 62,
+        "top": 97,
+        "width": 643,
+        "height": 598
+      },
+      "mechanical_preparation": "alpha >= 32 bounding box + 2 px safety crop, aspect-preserving downscale, transparent 768 square, bottom-aligned at y=696; no painting or alpha recoloring",
+      "identity_qa": {
+        "continuous_green_canopy": true,
+        "direct_three_lobed_leaf_palms": true,
+        "exactly_two_feet": true,
+        "no_tail": true,
+        "no_text": true,
+        "full_body_uncropped": true,
+        "visual_review": "pass"
+      },
+      "notes": "Distinct generated static pose; not an animation frame."
+    },
+    {
+      "id": "sleep",
+      "file": "sleep.png",
+      "width": 768,
+      "height": 768,
+      "bytes": 467347,
+      "sha256": "f098af1184c052059ef39d33efe8a26762a95f2d59c43629addfa11d91a15b4e",
+      "source_path": "/Users/tom/.codex/generated_images/01a18840-6918-78a2-88da-3f9f328d7c35/exec-d572f367-04b3-4ef8-a94b-d8ef5815b29e.png",
+      "source_sha256": "bacf24d272e4ed006385f1b4abdcfc849aaeb6ef1b2e2280f332a56be5e58dae",
+      "source_dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "source_alpha_bounds": {
+        "left": 103,
+        "top": 128,
+        "width": 1096,
+        "height": 1012
+      },
+      "output_alpha_bounds": {
+        "left": 60,
+        "top": 97,
+        "width": 648,
+        "height": 598
+      },
+      "mechanical_preparation": "alpha >= 32 bounding box + 2 px safety crop, aspect-preserving downscale, transparent 768 square, bottom-aligned at y=696; no painting or alpha recoloring",
+      "identity_qa": {
+        "continuous_green_canopy": true,
+        "direct_three_lobed_leaf_palms": true,
+        "exactly_two_feet": true,
+        "no_tail": true,
+        "no_text": true,
+        "full_body_uncropped": true,
+        "visual_review": "pass"
+      },
+      "notes": "Distinct generated static pose; not an animation frame."
+    },
+    {
+      "id": "umbrella",
+      "file": "umbrella.png",
+      "width": 768,
+      "height": 768,
+      "bytes": 469881,
+      "sha256": "4d21eceb3382d5ff26b6f68a091303d8e0a0c544121615b011ab922b5e5b4978",
+      "source_path": "/Users/tom/.codex/generated_images/01a18840-6918-78a2-88da-3f9f328d7c35/exec-3e1326f2-087c-4b1b-880e-91000d4bcf08.png",
+      "source_sha256": "b9656e5a5aa2f9b9a3fba7077ef9ded690a4b57d5c2b9d23b19594b3ce0dd7d8",
+      "source_dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "source_alpha_bounds": {
+        "left": 135,
+        "top": 119,
+        "width": 1097,
+        "height": 1001
+      },
+      "output_alpha_bounds": {
+        "left": 33,
+        "top": 54,
+        "width": 702,
+        "height": 640
+      },
+      "mechanical_preparation": "alpha >= 32 bounding box + 2 px safety crop, aspect-preserving downscale, transparent 768 square, bottom-aligned at y=696; no painting or alpha recoloring",
+      "identity_qa": {
+        "continuous_green_canopy": true,
+        "direct_three_lobed_leaf_palms": true,
+        "exactly_two_feet": true,
+        "no_tail": true,
+        "no_text": true,
+        "full_body_uncropped": true,
+        "visual_review": "pass"
+      },
+      "notes": "Prop is part of the full alpha bounds. Character is visually smaller to keep umbrella and full crown/feet within canvas."
+    },
+    {
+      "id": "think",
+      "file": "think.png",
+      "width": 768,
+      "height": 768,
+      "bytes": 484128,
+      "sha256": "6a361ed257a6adcd027898aca714d0916eb22c930ecd1ef6b3242b1b379dc0c0",
+      "source_path": "/Users/tom/.codex/generated_images/01a18840-6918-78a2-88da-3f9f328d7c35/exec-91c09bbe-d509-4799-926f-ebfb64a06f3a.png",
+      "source_sha256": "e4c6adf0ec52cf59db1a487cae8de313f730e0a5aa5331cea5349c10601edf5f",
+      "source_dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "source_alpha_bounds": {
+        "left": 75,
+        "top": 127,
+        "width": 1149,
+        "height": 1040
+      },
+      "output_alpha_bounds": {
+        "left": 53,
+        "top": 97,
+        "width": 661,
+        "height": 598
+      },
+      "mechanical_preparation": "alpha >= 32 bounding box + 2 px safety crop, aspect-preserving downscale, transparent 768 square, bottom-aligned at y=696; no painting or alpha recoloring",
+      "identity_qa": {
+        "continuous_green_canopy": true,
+        "direct_three_lobed_leaf_palms": true,
+        "exactly_two_feet": true,
+        "no_tail": true,
+        "no_text": true,
+        "full_body_uncropped": true,
+        "visual_review": "pass"
+      },
+      "notes": "Distinct generated static pose; not an animation frame."
+    }
+  ]
+}

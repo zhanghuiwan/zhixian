@@ -124,6 +124,20 @@ npm run dev
 
 当 `apps/api/.env` 中 `CREATE_DEMO_USER=true`，且 `apps/web/.env.local` 中 `NEXT_PUBLIC_DEMO_MODE=true` 时，可使用演示账号：`demo@zhixian.app` / `Demo1234!`。
 
+## Android App
+
+Android源码位于 [apps/mobile](apps/mobile/README.md)，当前0.3.2(6)，默认连接生产HTTPS API，与Web共享账号和服务端学习数据。
+
+```bash
+cd apps/mobile
+npm ci
+npm run check
+npm run dev:android        # USB真机热更新，需要电脑Metro
+npm run build:android:apk  # 独立内测包，不依赖电脑启动
+```
+
+独立包安装、JDK17／Android SDK环境与开发方式的区别见移动端README。APK与依赖缓存不进入Git；本次提交仅新增Android，不发布本地尚未提交的Web重设计。
+
 ## Docker 一键运行
 
 ```bash
@@ -154,3 +168,5 @@ docker compose config
 - 当前定位是个人/小规模项目；如果未来开放大量用户，应增加邮件验证、密码找回、限流、异步任务队列和集中式文件存储。
 
 2026-10-22 后端学习队列修复：`next_group=true`支持当前词书继续新学，并区分词书耗尽与每日目标完成，无数据库迁移。接口见 [API文档](docs/API.md)，后端单独更新见 [部署文档](docs/DEPLOYMENT.md#仅更新后端)。
+
+2026-10-29 Android 0.3.2：[情境闲闲主页](docs/design/home-companion-2026-10-29/README.md)，新增动作与轻动画、按心情／时段／城市天气变化的对白，点击填入后由用户发送。

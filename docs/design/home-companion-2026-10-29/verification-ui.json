@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-29",
+  "surface": "React Native Web isolated fixture",
+  "checks": [
+    "character click changes action",
+    "dialogue fills exact text without sending (server chat count 0)",
+    "explicit send renders SSE reply; double click guarded",
+    "history preserved; closing restores idle home",
+    "mood and selected city persist after reload; radio aria-checked exposed",
+    "city search failure and empty results recover without changing selected city",
+    "320x640 dark has no horizontal overflow; weather failure exposes retry without claiming weather",
+    "autonomous suggestion changes when idle, accelerated fixture timer; production delay unit tested at 28–46s",
+    "draft and displayed suggestion preserved while idle timer is paused",
+    "tab navigation preserves unsent draft and restores idle home",
+    "companion opt-out hides illustration and keeps usable dialogue input",
+    "减少动态开启后自动轮换停止，手动点击仍切换动作和对白"
+  ],
+  "nativeDevice": false
+}
