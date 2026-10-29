@@ -5,17 +5,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Image, Modal, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, ErrorState, LoadingView, IconButton } from '@/components/ui';
-import { CompanionView } from '@/components/companion';
+import { HomeCompanion } from '@/components/home-companion';
+import { CompanionSettings } from '@/components/companion-settings';
+import { useCompanionContext } from '@/hooks/use-companion-context';
 import { GlassContent, GlassSurface } from '@/components/glass';
 import { radius, shadows, type ThemeColors } from '@/constants/theme';
 import { useAppearance, useThemedStyles } from '@/context/appearance';
-import { useAuth } from '@/context/auth';
 import { actionLabel, planAIAction, type AIActionPlan } from '@/lib/ai-actions';
 import { api, ApiError, streamApi } from '@/lib/api';
 import type { AIConversation, AIMessage, AIResponseAction, Article } from '@/lib/types';
 
 type ChatItem = Pick<AIMessage, 'id' | 'role' | 'content' | 'actions'>;
-const prompts = ['安排今天怎么学', '解释一个易错词', '推荐一篇短文'];
 
 function cleanInline(value: string) { return value.replace(/\*\*(.*?)\*\*/g, '$1').replace(/__(.*?)__/g, '$1').replace(/`([^`]+)`/g, '$1').trim(); }
 function MessageContent({ content, color }: { content: string; color: string }) {
@@ -52,24 +52,31 @@ function ChatBubble({ item, sending, actionPending, onAction, compact = false, o
 
 export default function AssistantHome() {
   const { colors, styles } = useThemedStyles(createStyles);
-  const { reduceMotion } = useAppearance();
+  const { reduceMotion, preferences } = useAppearance();
   const insets = useSafeAreaInsets();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => { const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true)); const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false)); return () => { show.remove(); hide.remove(); }; }, []);
   const params = useLocalSearchParams<{ prompt?: string }>();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const listRef = useRef<FlatList>(null);
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [focused, setFocused] = useState(true);
   const [replyExpanded, setReplyExpanded] = useState(false);
   const [homeTurnId, setHomeTurnId] = useState<number | null>(null);
   const retryMessage = useRef('');
   const [input, setInput] = useState('');
+  const inputRef = useRef<TextInput>(null);
+  const sendingLock = useRef(false);
   const [sending, setSending] = useState(false);
   const [streamItems, setStreamItems] = useState<ChatItem[] | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [actionPending, setActionPending] = useState<string | null>(null);
+  const companion = useCompanionContext({
+    active: focused && preferences.companionEnabled && !keyboardVisible && !input.trim() && !sending && !historyVisible && !settingsVisible && homeTurnId === null,
+    reduceMotion,
+  });
   const today = useQuery({ queryKey: ['conversation-today'], queryFn: () => api<AIConversation | null>('/ai/conversations/today') });
   const messages = useQuery({ queryKey: ['messages', today.data?.id], enabled: !!today.data?.id, queryFn: () => api<AIMessage[]>(`/ai/conversations/${today.data!.id}/messages`) });
   const sourceItems: ChatItem[] = streamItems ?? messages.data ?? [];
@@ -80,14 +87,18 @@ export default function AssistantHome() {
   });
 
   // Re-entering the tab shows the greeting, while the conversation stays in history.
-  useFocusEffect(useCallback(() => () => {
-    setHomeTurnId(null); setReplyExpanded(false); setHistoryVisible(false);
-  }, [setHomeTurnId, setReplyExpanded, setHistoryVisible]));
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    return () => {
+      setFocused(false); setHomeTurnId(null); setReplyExpanded(false); setHistoryVisible(false); setSettingsVisible(false);
+    };
+  }, [setFocused, setHomeTurnId, setReplyExpanded, setHistoryVisible, setSettingsVisible]));
 
   useEffect(() => { if (params.prompt) setInput(params.prompt); }, [params.prompt]);
   const send = async (preset?: string) => {
     const message = (preset ?? input).trim();
-    if (!message || sending) return;
+    if (!message || sendingLock.current) return;
+    sendingLock.current = true;
     const temporaryId = -Date.now();
     const localUser: ChatItem = { id: temporaryId, role: 'user', content: message, actions: [] };
     const localAssistant: ChatItem = { id: temporaryId - 1, role: 'assistant', content: '', actions: [] };
@@ -115,7 +126,7 @@ export default function AssistantHome() {
         await queryClient.refetchQueries({ queryKey: ['messages', conversationId] });
         setStreamItems(null);
       }
-    } finally { setSending(false); }
+    } finally { sendingLock.current = false; setSending(false); }
   };
   const navigate = (plan: Extract<AIActionPlan, { kind: 'navigate' }>) => {
     if (plan.destination === 'article' && plan.id) router.push({ pathname: '/article/[id]', params: { id: plan.id } });
@@ -147,25 +158,29 @@ export default function AssistantHome() {
   const currentTurn = turnIndex >= 0 ? items.slice(turnIndex) : [];
   const latestReply = currentTurn.find((item) => item.role === 'assistant');
   const latestQuestion = currentTurn.find((item) => item.role === 'user');
+  const fillCompanionText = () => {
+    if (sendingLock.current) return;
+    setInput(companion.moment.text); inputRef.current?.focus();
+  };
   return <SafeAreaView style={styles.safe} edges={['top']}>
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
         <View><AppText variant="heading">闲闲</AppText></View>
-        <IconButton icon="chatbox-outline" label="查看对话历史" onPress={() => { Keyboard.dismiss(); setHomeTurnId(null); setReplyExpanded(false); setHistoryVisible(true); }} />
+        <View style={styles.headerRight}><IconButton icon="options-outline" label="陪伴设置" onPress={() => { Keyboard.dismiss(); setSettingsVisible(true); }} />
+<IconButton icon="chatbox-outline" label="查看对话历史" onPress={() => { Keyboard.dismiss(); setHomeTurnId(null); setReplyExpanded(false); setHistoryVisible(true); }} /></View>
       </View>
       <GlassContent style={styles.flex}><ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.home}>
         {latestQuestion && <AppText variant="small" color={colors.muted} numberOfLines={2} style={{ paddingHorizontal: 8, marginBottom: 8 }}>{latestQuestion.content}</AppText>}
-        {latestReply ? <ChatBubble key={latestReply.id} compact onExpand={setReplyExpanded} item={latestReply} sending={sending} actionPending={actionPending} onAction={handleAction} /> : <View style={styles.welcome}><AppText variant="heading" style={{ textAlign: 'center' }}>你好，{user?.nickname || '今天也来啦'}。</AppText></View>}
-        <View style={styles.speechTail} />
-        {!keyboardVisible && <View style={[styles.openSpace, replyExpanded && { minHeight: 120 }]}><CompanionView size={replyExpanded ? 110 : 200} state={sending ? 'waiting' : 'idle'} /></View>}
-        {!currentTurn.length && !keyboardVisible && <View style={styles.prompts}>{prompts.slice(0, 2).map((prompt) => <Pressable accessibilityRole="button" key={prompt} disabled={sending} onPress={() => send(prompt)} style={styles.prompt}><AppText variant="small" color={colors.green}>{prompt}</AppText></Pressable>)}</View>}
+        {latestReply ? <ChatBubble key={latestReply.id} compact onExpand={setReplyExpanded} item={latestReply} sending={sending} actionPending={actionPending} onAction={handleAction} /> : null}
+        <HomeCompanion action={sending ? 'think' : companion.moment.action} text={latestReply ? '' : companion.moment.text} revision={companion.revision} onPressCharacter={companion.advance} onPressText={fillCompanionText} active={focused && companion.foreground && !keyboardVisible && !historyVisible && !settingsVisible} compact={replyExpanded || keyboardVisible} characterVisible={!keyboardVisible} disabled={sending} />
       </ScrollView></GlassContent>
       <View style={[styles.composerWrap, { paddingBottom: keyboardVisible ? Math.max(insets.bottom, 10) : 74 + insets.bottom }]}>
         {notice ? <AppText accessibilityLiveRegion="polite" variant="small" color={colors.green}>{notice}</AppText> : null}
         {error ? <View style={styles.feedback}><AppText accessibilityLiveRegion="polite" variant="small" color={colors.danger} style={{ flex: 1 }}>{error}</AppText><Pressable accessibilityRole="button" onPress={() => error.includes('配置') ? router.push('/profile') : send(retryMessage.current)} style={{ minHeight: 44, justifyContent: 'center' }}><AppText variant="small" color={colors.green}>{error.includes('配置') ? '设置' : '重试'}</AppText></Pressable></View> : null}
-        <GlassSurface style={styles.composer}><Image source={require('../../../assets/images/wutong-leaf-miniprogram.png')} resizeMode="contain" accessible={false} style={styles.composerLeaf} /><TextInput accessibilityLabel="和闲闲聊聊" value={input} onChangeText={setInput} placeholder={sending ? '闲闲正在想…' : '和闲闲聊聊…'} placeholderTextColor={colors.muted} multiline maxLength={4000} style={styles.input} /><Pressable accessibilityRole="button" accessibilityLabel="发送消息" disabled={!input.trim() || sending} onPress={() => send()} style={[styles.send, (!input.trim() || sending) && styles.sendDisabled]}><Ionicons name={sending ? 'hourglass-outline' : 'arrow-up'} size={20} color={colors.onPrimary} /></Pressable></GlassSurface>
+        <GlassSurface style={styles.composer}><Image source={require('../../../assets/images/wutong-leaf-miniprogram.png')} resizeMode="contain" accessible={false} style={styles.composerLeaf} /><TextInput ref={inputRef} accessibilityLabel="和闲闲聊聊" value={input} onChangeText={setInput} placeholder={sending ? '闲闲正在想…' : '和闲闲聊聊…'} placeholderTextColor={colors.muted} multiline maxLength={4000} style={styles.input} /><Pressable accessibilityRole="button" accessibilityLabel="发送消息" disabled={!input.trim() || sending} onPress={() => send()} style={[styles.send, (!input.trim() || sending) && styles.sendDisabled]}><Ionicons name={sending ? 'hourglass-outline' : 'arrow-up'} size={20} color={colors.onPrimary} /></Pressable></GlassSurface>
       </View>
     </KeyboardAvoidingView>
+    <CompanionSettings visible={settingsVisible} onClose={() => setSettingsVisible(false)} mood={companion.mood} setMood={companion.setMood} city={companion.city} setCity={companion.setCity} weatherKind={companion.weatherKind} weatherStatus={companion.weatherStatus} weatherError={companion.weatherError} refreshWeather={companion.refreshWeather} />
     <Modal visible={historyVisible} presentationStyle="fullScreen" animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setHistoryVisible(false)}><SafeAreaView style={styles.safe}><View style={styles.header}><AppText variant="heading">今天的对话</AppText><IconButton icon="close" label="关闭对话历史" onPress={() => setHistoryVisible(false)} /></View>{today.isLoading || messages.isLoading ? <LoadingView label="正在加载对话" /> : today.error || messages.error ? <ErrorState message={((today.error || messages.error) as Error).message} onRetry={() => { today.refetch(); messages.refetch(); }} /> : items.length ? <FlatList ref={listRef} style={styles.flex} data={items} keyExtractor={(item) => String(item.id)} contentContainerStyle={styles.messages} renderItem={({ item }) => <View style={styles.historyRow}><ChatBubble item={item} sending={sending} actionPending={actionPending} onAction={handleAction} /></View>} /> : <View style={styles.emptyHistory}><AppText color={colors.muted}>暂无对话</AppText></View>}</SafeAreaView></Modal>
   </SafeAreaView>;
 }

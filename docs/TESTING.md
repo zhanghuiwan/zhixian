@@ -169,3 +169,7 @@ python -m app.db.import_wordlist \
 ## Android检查（2026-10-29）
 
 在 `apps/mobile` 运行 `npm ci`、`npm run check`，包含lint、TypeScript、17项Vitest与Expo Doctor；GitHub CI新增相同门禁。生产运行与资源打包另外通过 `EXPO_NO_DOTENV=1 npx expo export --platform android --output-dir dist/publish-check` 检查。本次对齐SDK57补丁（expo57.0.31、@expo/ui57.0.26、expo-router57.0.29），lint／类型检查／17项测试／Expo Doctor21/21通过，arm64原生Release重新构建成功并确认内嵌JS与生产API。2026-10-24真机登录与独立启动记录保留，本次未重新安装手机。未修改API、Web或Compose，本次不重复运行其本地测试；PR的现有CI仍会检查API与Web。
+
+## Android主页陪伴（2026-10-29）
+
+在 `apps/mobile` 执行 `npm run check`，现有38项测试，覆盖时间边界、非重复对白、心情天气候选、未知天气、请求取消／超时／竞态、缓存过期、设置面板后台恢复、情境展示暂停。浏览器通过 `scripts/preview-home.cjs` 使用虚构账号与本地天气，实际界面检查点击填入不发送、发送SSE、双击防重、历史、城市设置、浅深／小屏、减少动态和关闭陪伴。原生arm64 Release另行构建，不把React Native Web视作真机触摸或电量验收。详情见 [记录](design/home-companion-2026-10-29/README.md)。
