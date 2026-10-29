@@ -124,6 +124,20 @@ npm run dev
 
 当 `apps/api/.env` 中 `CREATE_DEMO_USER=true`，且 `apps/web/.env.local` 中 `NEXT_PUBLIC_DEMO_MODE=true` 时，可使用演示账号：`demo@zhixian.app` / `Demo1234!`。
 
+## Android App
+
+Android源码位于 [apps/mobile](apps/mobile/README.md)，当前0.3.1(5)，默认连接生产HTTPS API，与Web共享账号和服务端学习数据。
+
+```bash
+cd apps/mobile
+npm ci
+npm run check
+npm run dev:android        # USB真机热更新，需要电脑Metro
+npm run build:android:apk  # 独立内测包，不依赖电脑启动
+```
+
+独立包安装、JDK17／Android SDK环境与开发方式的区别见移动端README。APK与依赖缓存不进入Git；本次提交仅新增Android，不发布本地尚未提交的Web重设计。
+
 ## Docker 一键运行
 
 ```bash

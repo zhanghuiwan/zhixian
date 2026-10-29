@@ -165,3 +165,7 @@ python -m app.db.import_wordlist \
 ## 再学一组后端回归（2026-10-22）
 
 `apps/api/tests/test_study_continuation.py`覆盖超过每日目标、不重复且不串词书、只有收藏而未评分的词、系统／个人词书、账号隔离、复习后继续和未选择词书。运行 `python -m pytest`；此次仅发布后端，不改变数据库模型。
+
+## Android检查（2026-10-29）
+
+在 `apps/mobile` 运行 `npm ci`、`npm run check`，包含lint、TypeScript、17项Vitest与Expo Doctor；GitHub CI新增相同门禁。生产运行与资源打包另外通过 `EXPO_NO_DOTENV=1 npx expo export --platform android --output-dir dist/publish-check` 检查。本次对齐SDK57补丁（expo57.0.31、@expo/ui57.0.26、expo-router57.0.29），lint／类型检查／17项测试／Expo Doctor21/21通过，arm64原生Release重新构建成功并确认内嵌JS与生产API。2026-10-24真机登录与独立启动记录保留，本次未重新安装手机。未修改API、Web或Compose，本次不重复运行其本地测试；PR的现有CI仍会检查API与Web。

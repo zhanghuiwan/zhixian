@@ -8,6 +8,7 @@
 
 | 你要做什么 | 先读 |
 |---|---|
+| Android独立包与USB开发 | [移动端源码及操作说明](../apps/mobile/README.md) |
 | 第一次接手项目 | `../AGENTS.md` → `PROJECT_STATUS.md` → `ARCHITECTURE.md` |
 | 本地启动或换电脑 | `../README.md`、`development/README.md` |
 | 修改后端、前端或 Agent | `CODING_STANDARDS.md`、`API.md`、相关源码测试 |

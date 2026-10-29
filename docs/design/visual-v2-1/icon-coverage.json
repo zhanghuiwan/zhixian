@@ -1,0 +1,665 @@
+{
+  "date": "2026-10-12",
+  "mode": "read-only static JSX attributes, icon calls and icon-property/default initializers",
+  "sourceGlyphCount": 45,
+  "uniqueFiles": [
+    "apps/mobile/src/app/(tabs)/_layout.tsx",
+    "apps/mobile/src/app/(tabs)/index.tsx",
+    "apps/mobile/src/app/(tabs)/profile.tsx",
+    "apps/mobile/src/app/(tabs)/records.tsx",
+    "apps/mobile/src/app/(tabs)/study.tsx",
+    "apps/mobile/src/app/article/[id].tsx",
+    "apps/mobile/src/app/articles.tsx",
+    "apps/mobile/src/app/learn.tsx",
+    "apps/mobile/src/app/sentences.tsx",
+    "apps/mobile/src/app/vocabulary.tsx",
+    "apps/mobile/src/app/wordbook/[kind]/[id].tsx",
+    "apps/mobile/src/app/wordbooks.tsx",
+    "apps/mobile/src/components/ui.tsx"
+  ],
+  "unknownSourceGlyphs": [],
+  "map": {
+    "add": "add",
+    "add-circle-outline": "add-circle",
+    "albums-outline": "personal-book",
+    "arrow-forward": "arrow-right",
+    "arrow-up": "arrow-up",
+    "book": "study",
+    "book-outline": "study",
+    "bookmark": "bookmark-filled",
+    "bookmark-outline": "bookmark",
+    "calendar-clear-outline": "calendar",
+    "chatbox-ellipses-outline": "sentences",
+    "chatbox-outline": "ai",
+    "checkmark-circle": "check-circle",
+    "checkmark-circle-outline": "check-circle",
+    "chevron-back": "back",
+    "chevron-down": "chevron-down",
+    "chevron-forward": "forward",
+    "chevron-up": "chevron-up",
+    "close": "close",
+    "cloud-offline-outline": "offline",
+    "ellipsis-horizontal": "more",
+    "eye-outline": "eye",
+    "hardware-chip-outline": "model",
+    "hourglass-outline": "hourglass",
+    "information-circle-outline": "info",
+    "language-outline": "translate",
+    "leaf": "xianxian",
+    "leaf-outline": "xianxian",
+    "library-outline": "wordbooks",
+    "list-outline": "list",
+    "log-out-outline": "logout",
+    "mail-outline": "mail",
+    "options-outline": "settings",
+    "person": "profile",
+    "person-outline": "profile",
+    "play": "play",
+    "reader-outline": "articles",
+    "refresh": "retry",
+    "remove-circle-outline": "remove-circle",
+    "search-outline": "search",
+    "sparkles": "ai",
+    "text-outline": "text",
+    "time-outline": "time",
+    "trash-outline": "delete",
+    "volume-high-outline": "volume"
+  },
+  "occurrences": [
+    {
+      "file": "apps/mobile/src/app/(tabs)/_layout.tsx",
+      "name": "book",
+      "line": 16
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/_layout.tsx",
+      "name": "book-outline",
+      "line": 16
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/_layout.tsx",
+      "name": "leaf",
+      "line": 17
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/_layout.tsx",
+      "name": "leaf-outline",
+      "line": 17
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/_layout.tsx",
+      "name": "person",
+      "line": 18
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/_layout.tsx",
+      "name": "person-outline",
+      "line": 18
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "chatbox-ellipses-outline",
+      "line": 31
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "leaf",
+      "line": 46
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "chevron-up",
+      "line": 48
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "chevron-down",
+      "line": 48
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "leaf-outline",
+      "line": 141
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "ellipsis-horizontal",
+      "line": 142
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "book-outline",
+      "line": 150
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "arrow-forward",
+      "line": 150
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "arrow-forward",
+      "line": 151
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "leaf-outline",
+      "line": 157
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "hourglass-outline",
+      "line": 157
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/index.tsx",
+      "name": "arrow-up",
+      "line": 157
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "chevron-forward",
+      "line": 21
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "leaf",
+      "line": 101
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "leaf-outline",
+      "line": 102
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "information-circle-outline",
+      "line": 117
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "close",
+      "line": 117
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "options-outline",
+      "line": 123
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "leaf-outline",
+      "line": 124
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "chevron-forward",
+      "line": 124
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "mail-outline",
+      "line": 128
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "log-out-outline",
+      "line": 128
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "close",
+      "line": 132
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "chevron-back",
+      "line": 141
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "close",
+      "line": 142
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "leaf-outline",
+      "line": 144
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/profile.tsx",
+      "name": "chevron-forward",
+      "line": 144
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/records.tsx",
+      "name": "close",
+      "line": 20
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/records.tsx",
+      "name": "close",
+      "line": 21
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/records.tsx",
+      "name": "close",
+      "line": 23
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/records.tsx",
+      "name": "chevron-back",
+      "line": 24
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/records.tsx",
+      "name": "chevron-forward",
+      "line": 24
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/records.tsx",
+      "name": "time-outline",
+      "line": 24
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/records.tsx",
+      "name": "calendar-clear-outline",
+      "line": 32
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/records.tsx",
+      "name": "leaf-outline",
+      "line": 33
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/records.tsx",
+      "name": "bookmark-outline",
+      "line": 37
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "refresh",
+      "line": 15
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "sparkles",
+      "line": 15
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "chevron-forward",
+      "line": 17
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "arrow-forward",
+      "line": 27
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "chevron-forward",
+      "line": 37
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "book-outline",
+      "line": 57
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "chevron-forward",
+      "line": 58
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "arrow-forward",
+      "line": 65
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "library-outline",
+      "line": 77
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "bookmark-outline",
+      "line": 78
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "reader-outline",
+      "line": 82
+    },
+    {
+      "file": "apps/mobile/src/app/(tabs)/study.tsx",
+      "name": "chatbox-ellipses-outline",
+      "line": 83
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "close",
+      "line": 100
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "volume-high-outline",
+      "line": 103
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "language-outline",
+      "line": 103
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "bookmark",
+      "line": 103
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "bookmark-outline",
+      "line": 103
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "leaf-outline",
+      "line": 103
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "checkmark-circle-outline",
+      "line": 104
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "leaf",
+      "line": 107
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "volume-high-outline",
+      "line": 108
+    },
+    {
+      "file": "apps/mobile/src/app/article/[id].tsx",
+      "name": "bookmark-outline",
+      "line": 108
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "hardware-chip-outline",
+      "line": 14
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "reader-outline",
+      "line": 14
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "chevron-forward",
+      "line": 16
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "close",
+      "line": 26
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "reader-outline",
+      "line": 27
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "book-outline",
+      "line": 29
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "arrow-forward",
+      "line": 29
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "text-outline",
+      "line": 36
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "search-outline",
+      "line": 37
+    },
+    {
+      "file": "apps/mobile/src/app/articles.tsx",
+      "name": "bookmark-outline",
+      "line": 38
+    },
+    {
+      "file": "apps/mobile/src/app/learn.tsx",
+      "name": "close",
+      "line": 106
+    },
+    {
+      "file": "apps/mobile/src/app/learn.tsx",
+      "name": "volume-high-outline",
+      "line": 111
+    },
+    {
+      "file": "apps/mobile/src/app/learn.tsx",
+      "name": "eye-outline",
+      "line": 112
+    },
+    {
+      "file": "apps/mobile/src/app/sentences.tsx",
+      "name": "close",
+      "line": 31
+    },
+    {
+      "file": "apps/mobile/src/app/sentences.tsx",
+      "name": "search-outline",
+      "line": 32
+    },
+    {
+      "file": "apps/mobile/src/app/sentences.tsx",
+      "name": "add",
+      "line": 32
+    },
+    {
+      "file": "apps/mobile/src/app/sentences.tsx",
+      "name": "chatbox-ellipses-outline",
+      "line": 35
+    },
+    {
+      "file": "apps/mobile/src/app/sentences.tsx",
+      "name": "volume-high-outline",
+      "line": 38
+    },
+    {
+      "file": "apps/mobile/src/app/sentences.tsx",
+      "name": "book-outline",
+      "line": 38
+    },
+    {
+      "file": "apps/mobile/src/app/sentences.tsx",
+      "name": "leaf-outline",
+      "line": 38
+    },
+    {
+      "file": "apps/mobile/src/app/sentences.tsx",
+      "name": "trash-outline",
+      "line": 38
+    },
+    {
+      "file": "apps/mobile/src/app/sentences.tsx",
+      "name": "chatbox-outline",
+      "line": 40
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "close",
+      "line": 46
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "search-outline",
+      "line": 47
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "add",
+      "line": 47
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "checkmark-circle",
+      "line": 48
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "volume-high-outline",
+      "line": 50
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "add-circle-outline",
+      "line": 52
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "close",
+      "line": 52
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "bookmark-outline",
+      "line": 53
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "bookmark-outline",
+      "line": 56
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "albums-outline",
+      "line": 56
+    },
+    {
+      "file": "apps/mobile/src/app/vocabulary.tsx",
+      "name": "add",
+      "line": 56
+    },
+    {
+      "file": "apps/mobile/src/app/wordbook/[kind]/[id].tsx",
+      "name": "close",
+      "line": 39
+    },
+    {
+      "file": "apps/mobile/src/app/wordbook/[kind]/[id].tsx",
+      "name": "play",
+      "line": 40
+    },
+    {
+      "file": "apps/mobile/src/app/wordbook/[kind]/[id].tsx",
+      "name": "checkmark-circle",
+      "line": 41
+    },
+    {
+      "file": "apps/mobile/src/app/wordbook/[kind]/[id].tsx",
+      "name": "search-outline",
+      "line": 42
+    },
+    {
+      "file": "apps/mobile/src/app/wordbook/[kind]/[id].tsx",
+      "name": "add",
+      "line": 42
+    },
+    {
+      "file": "apps/mobile/src/app/wordbook/[kind]/[id].tsx",
+      "name": "volume-high-outline",
+      "line": 43
+    },
+    {
+      "file": "apps/mobile/src/app/wordbook/[kind]/[id].tsx",
+      "name": "remove-circle-outline",
+      "line": 43
+    },
+    {
+      "file": "apps/mobile/src/app/wordbook/[kind]/[id].tsx",
+      "name": "albums-outline",
+      "line": 43
+    },
+    {
+      "file": "apps/mobile/src/app/wordbooks.tsx",
+      "name": "list-outline",
+      "line": 17
+    },
+    {
+      "file": "apps/mobile/src/app/wordbooks.tsx",
+      "name": "book-outline",
+      "line": 17
+    },
+    {
+      "file": "apps/mobile/src/app/wordbooks.tsx",
+      "name": "chevron-forward",
+      "line": 19
+    },
+    {
+      "file": "apps/mobile/src/app/wordbooks.tsx",
+      "name": "close",
+      "line": 41
+    },
+    {
+      "file": "apps/mobile/src/app/wordbooks.tsx",
+      "name": "search-outline",
+      "line": 42
+    },
+    {
+      "file": "apps/mobile/src/app/wordbooks.tsx",
+      "name": "leaf",
+      "line": 44
+    },
+    {
+      "file": "apps/mobile/src/app/wordbooks.tsx",
+      "name": "play",
+      "line": 44
+    },
+    {
+      "file": "apps/mobile/src/app/wordbooks.tsx",
+      "name": "list-outline",
+      "line": 47
+    },
+    {
+      "file": "apps/mobile/src/app/wordbooks.tsx",
+      "name": "search-outline",
+      "line": 50
+    },
+    {
+      "file": "apps/mobile/src/components/ui.tsx",
+      "name": "leaf",
+      "line": 21
+    },
+    {
+      "file": "apps/mobile/src/components/ui.tsx",
+      "name": "chevron-forward",
+      "line": 44
+    },
+    {
+      "file": "apps/mobile/src/components/ui.tsx",
+      "name": "leaf-outline",
+      "line": 72
+    },
+    {
+      "file": "apps/mobile/src/components/ui.tsx",
+      "name": "cloud-offline-outline",
+      "line": 74
+    }
+  ],
+  "notes": [
+    "Runtime model data and account data are not read.",
+    "Same historical glyph can represent different roles; choose the new semantic entry icon when applying.",
+    "No business app replacement in this review stage."
+  ]
+}
